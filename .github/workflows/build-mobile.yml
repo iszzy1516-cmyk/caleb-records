@@ -21,8 +21,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -36,16 +34,18 @@ jobs:
       - name: Install NDK
         run: sdkmanager "ndk;27.0.11718014"
 
-      - name: Setup Rust
-        uses: dtolnay/rust-action@stable
-        with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+      - name: Install Rust targets
+        run: |
+          rustup target add aarch64-linux-android
+          rustup target add armv7-linux-androideabi
+          rustup target add i686-linux-android
+          rustup target add x86_64-linux-android
 
       - name: Install frontend dependencies
         run: npm install
 
       - name: Install Tauri CLI
-        run: npm install -g @tauri-apps/cli
+        run: cargo install tauri-cli --version ^2.0
 
       - name: Init Android project
         run: cargo tauri android init
