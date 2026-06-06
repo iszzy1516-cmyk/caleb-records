@@ -52,13 +52,25 @@ jobs:
       - name: Init Android project
         run: cargo tauri android init
 
+      - name: Enable universal APK
+        run: |
+          sed -i 's|// splits {|splits {|' src-tauri/gen/android/app/build.gradle.kts
+          sed -i 's|//   abi {|  abi {|' src-tauri/gen/android/app/build.gradle.kts
+          sed -i 's|//     isEnable = true|    isEnable = true|' src-tauri/gen/android/app/build.gradle.kts
+          sed -i 's|//     reset()|    reset()|' src-tauri/gen/android/app/build.gradle.kts
+          sed -i 's|//     include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")|    include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")|' src-tauri/gen/android/app/build.gradle.kts
+          sed -i 's|//     isUniversalApk = true|    isUniversalApk = true|' src-tauri/gen/android/app/build.gradle.kts
+          sed -i 's|//   }|  }|' src-tauri/gen/android/app/build.gradle.kts
+          sed -i 's|// }|}|' src-tauri/gen/android/app/build.gradle.kts
+
       - name: Build APK
         run: cargo tauri android build --apk
         env:
           NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/27.0.11718014
 
-      - name: Upload APK
+      - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: frontend/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: warn
