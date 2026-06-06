@@ -8,6 +8,8 @@ on:
 
 jobs:
   build-android:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     defaults:
       run:
