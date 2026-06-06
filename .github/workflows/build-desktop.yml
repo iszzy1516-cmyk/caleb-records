@@ -18,12 +18,16 @@ jobs:
         include:
           - platform: ubuntu-22.04
             args: ''
+            artifact-name: linux
           - platform: windows-latest
             args: ''
+            artifact-name: windows
           - platform: macos-latest
             args: '--target aarch64-apple-darwin'
+            artifact-name: macos-aarch64
           - platform: macos-latest
             args: '--target x86_64-apple-darwin'
+            artifact-name: macos-x86_64
 
     runs-on: ${{ matrix.platform }}
 
@@ -62,3 +66,10 @@ jobs:
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true
           prerelease: false
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.artifact-name }}
+          path: desktop/src-tauri/target/**/release/bundle/**/*
+          if-no-files-found: warn
