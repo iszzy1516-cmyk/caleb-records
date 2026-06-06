@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Caleb University Records</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <img src="assets/caleb-logo.jpg" alt="Caleb University" class="logo" />
+      <div class="header-text">
+        <h1>Caleb University</h1>
+        <p>Records Management System — Desktop</p>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="status-grid">
+        <div class="status-card" id="backend-card">
+          <div class="status-dot" id="backend-dot"></div>
+          <div class="status-info">
+            <h3>Backend API</h3>
+            <p id="backend-status">Checking...</p>
+            <span class="status-url">localhost:8000</span>
+          </div>
+        </div>
+        <div class="status-card" id="student-card">
+          <div class="status-dot" id="student-dot"></div>
+          <div class="status-info">
+            <h3>Student Portal</h3>
+            <p id="student-status">Checking...</p>
+            <span class="status-url">localhost:5173</span>
+          </div>
+        </div>
+        <div class="status-card" id="staff-card">
+          <div class="status-dot" id="staff-dot"></div>
+          <div class="status-info">
+            <h3>Staff Portal</h3>
+            <p id="staff-status">Checking...</p>
+            <span class="status-url">localhost:5174</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="actions">
+        <button class="btn btn-primary" id="btn-start-backend" disabled>
+          <span class="icon">▶</span> Start Backend
+        </button>
+        <button class="btn btn-secondary" id="btn-stop-backend" disabled>
+          <span class="icon">⏹</span> Stop Backend
+        </button>
+        <button class="btn btn-student" id="btn-student" disabled>
+          <span class="icon">🎓</span> Open Student Portal
+        </button>
+        <button class="btn btn-staff" id="btn-staff" disabled>
+          <span class="icon">🛡</span> Open Staff Portal
+        </button>
+      </section>
+
+      <section class="console">
+        <div class="console-header">
+          <h3>Backend Console</h3>
+          <button class="btn-clear" id="btn-clear">Clear</button>
+        </div>
+        <pre class="console-output" id="console-output"></pre>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>© 2024 Caleb University. All rights reserved.</p>
+      <p class="version">v1.0.0</p>
+    </footer>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>

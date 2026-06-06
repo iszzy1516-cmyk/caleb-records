@@ -1,0 +1,26 @@
+[package]
+name = "caleb-records-desktop"
+version = "1.0.0"
+description = "Caleb University Records Desktop App"
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "caleb_records_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["process", "time", "sync", "rt", "net"] }
+url = "2"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true

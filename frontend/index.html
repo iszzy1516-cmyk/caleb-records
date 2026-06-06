@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/jpeg" href="/caleb-logo.jpg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CU-Records — Caleb University</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      (function() {
+        function addBackButton() {
+          if (!window.__TAURI__) return;
+          const btn = document.createElement('button');
+          btn.innerHTML = '← Back to Launcher';
+          btn.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:9999;background:#00843D;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-family:sans-serif;font-weight:600;transition:opacity .2s;';
+          btn.onmouseenter = function() { btn.style.opacity = '0.9'; };
+          btn.onmouseleave = function() { btn.style.opacity = '1'; };
+          btn.onclick = function() { window.close(); };
+          document.body.appendChild(btn);
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', addBackButton);
+        } else {
+          addBackButton();
+        }
+      })();
+    </script>
+  </body>
+</html>
