@@ -51,16 +51,7 @@ jobs:
         run: |
           NDK="$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
           mkdir -p src-tauri/.cargo
-          cat > src-tauri/.cargo/config.toml << CARGOCONF
-          [target.aarch64-linux-android]
-          linker = "$NDK/aarch64-linux-android24-clang"
-          [target.armv7-linux-androideabi]
-          linker = "$NDK/armv7a-linux-androideabi24-clang"
-          [target.i686-linux-android]
-          linker = "$NDK/i686-linux-android24-clang"
-          [target.x86_64-linux-android]
-          linker = "$NDK/x86_64-linux-android24-clang"
-          CARGOCONF
+          printf '[target.aarch64-linux-android]\nlinker = "%s/aarch64-linux-android24-clang"\n[target.armv7-linux-androideabi]\nlinker = "%s/armv7a-linux-androideabi24-clang"\n[target.i686-linux-android]\nlinker = "%s/i686-linux-android24-clang"\n[target.x86_64-linux-android]\nlinker = "%s/x86_64-linux-android24-clang"\n' "$NDK" "$NDK" "$NDK" "$NDK" > src-tauri/.cargo/config.toml
           cat src-tauri/.cargo/config.toml
 
       - name: Install frontend dependencies
@@ -74,21 +65,12 @@ jobs:
 
       - name: Patch Gradle for universal APK
         run: |
-          python3 << 'PYEOF'
+          python3 -c "
+          import sys
           gradle = 'src-tauri/gen/android/app/build.gradle.kts'
           with open(gradle, 'r') as f:
               content = f.read()
-          
-          splits = '''    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-            isUniversalApk = true
-        }
-    }
-'''
-          
+          splits_block = '    splits {\n        abi {\n            isEnable = true\n            reset()\n            include(\"armeabi-v7a\", \"arm64-v8a\", \"x86\", \"x86_64\")\n            isUniversalApk = true\n        }\n    }\n'
           lines = content.split('\n')
           depth = 0
           in_android = False
@@ -101,15 +83,15 @@ jobs:
                   if depth == 0 and '}' in line:
                       insert_idx = i
                       break
-          
           if insert_idx > 0:
-              lines.insert(insert_idx, splits)
+              lines.insert(insert_idx, splits_block)
               with open(gradle, 'w') as f:
                   f.write('\n'.join(lines))
-              print('Patched build.gradle.kts for universal APK')
+              print('Patched build.gradle.kts')
           else:
               print('WARNING: Could not find android block')
-          PYEOF
+              sys.exit(1)
+          "
 
       - name: Build APK
         run: cargo tauri android build --apk
