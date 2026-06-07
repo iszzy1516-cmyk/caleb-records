@@ -93,8 +93,8 @@ jobs:
               sys.exit(1)
           "
 
-      - name: Build APK
-        run: cargo tauri android build --apk
+      - name: Build debug APK
+        run: cargo tauri android build --apk --debug
         env:
           NDK_HOME: ${{ env.NDK_HOME }}
 
