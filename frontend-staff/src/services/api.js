@@ -1,4 +1,6 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = (typeof window !== 'undefined' && window.__TAURI__)
+  ? 'http://141.147.48.186'
+  : ''; // Web frontend uses same-domain relative path
 
 function getToken() {
   return localStorage.getItem('cul_token');

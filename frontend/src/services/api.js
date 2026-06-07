@@ -1,6 +1,10 @@
 function getApiBase() {
-  const saved = localStorage.getItem('cul_api_url');
-  return saved || import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  // Tauri mobile/desktop app connects to live server
+  if (typeof window !== 'undefined' && window.__TAURI__) {
+    return 'http://141.147.48.186';
+  }
+  // Web frontend uses same-domain relative path
+  return '';
 }
 
 const API_BASE = getApiBase();

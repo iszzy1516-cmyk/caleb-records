@@ -1,0 +1,79 @@
+# Cline Persistent Memory & Knowledge Rules
+# ==========================================
+# This file is auto-loaded at the start of EVERY Cline task.
+# It ensures the AI remembers context across sessions and syncs with Open WebUI.
+
+## 1. MEMORY PROTOCOL — CRITICAL
+
+At the END of every significant task (especially after writing code, making architectural decisions, or fixing bugs), you MUST update `AI_MEMORY.md` in the project root with:
+
+- **What was built/modified** — file paths and purposes
+- **Key decisions** — why you chose X over Y
+- **Code patterns established** — reusable patterns, naming conventions
+- **APIs/interfaces defined** — function signatures, data structures
+- **Blockers & TODOs** — anything unfinished or needing follow-up
+- **Dependencies added** — new packages, tools, or env changes
+
+Use this EXACT format when appending to AI_MEMORY.md:
+
+```markdown
+## [YYYY-MM-DD HH:MM] — Brief Title
+
+**Files:** `path/to/file1`, `path/to/file2`
+**Decision:** Description of the architectural or implementation choice.
+**Pattern:** Reusable code pattern or convention.
+**Blockers:** Any unresolved issues.
+```
+
+## 2. BEFORE STARTING ANY TASK
+
+1. **Read `AI_MEMORY.md`** first to understand the current project state.
+2. **Read `README.md`** if it exists.
+3. Check for any `.env` or config files.
+4. If the user references something you don't see in memory, ask for clarification.
+
+## 3. WEB SEARCH PROTOCOL
+
+You have access to a **browser tool** for web search. USE IT when:
+- The user asks about recent technologies, CVEs, or library versions
+- You need documentation for an API you haven't seen before
+- You need to verify best practices or compatibility
+- The user says "search for...", "look up...", "find out..."
+
+After searching, **summarize findings in AI_MEMORY.md** under a "Research" section.
+
+## 4. KNOWLEDGE BASE INTEGRATION
+
+The following knowledge bases are available via Open WebUI and SHOULD influence your work:
+
+- **System Design Patterns** — `/home/israel/knowledge_bases/technical/system_design_patterns.md`
+- **OWASP API Security** — `/home/israel/knowledge_bases/technical/owasp_api_top10.md`
+- **NIST Framework** — `/home/israel/knowledge_bases/technical/nist_framework.md`
+- **System Design Books** — `/home/israel/knowledge_bases/technical/books/`
+- **Therapeutic Techniques** — `/home/israel/knowledge_bases/therapeutic/` (if relevant)
+
+When building security-critical or distributed systems, REFERENCE these files explicitly.
+You can read them with the file tool if needed.
+
+## 5. CODE QUALITY RULES
+
+- Write idiomatic, well-commented code
+- Add docstrings to all public functions
+- Include error handling and input validation
+- Write tests for non-trivial logic
+- Prefer explicit over implicit
+- Never hardcode secrets — use environment variables
+
+## 6. SESSION SHARING WITH OPEN WEBUI
+
+After completing a task, if the user says "sync to Open WebUI" or similar:
+1. Summarize the session into a markdown file in `/home/israel/knowledge_bases/technical/session_summaries/`
+2. Filename format: `YYYY-MM-DD_HHMM-session-title.md`
+3. The sync script will pick it up automatically.
+
+## 7. PROJECT-SPECIFIC CONTEXT
+
+**Active Project:** NetGuard AI (or current workspace project)
+**Primary Workspace:** `/home/israel/testing/`
+**Tech Stack Preferences:** Rust (systems), Python (ML/API), React (frontend), FastAPI (backend)
+**Target Platform:** Parrot OS, AMD Ryzen 9 5900HS, 16GB RAM

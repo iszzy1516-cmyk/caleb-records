@@ -40,6 +40,20 @@ services:
     networks:
       - culrecords-net
 
+  student-frontend:
+    build: ./frontend
+    container_name: culrecords-student-ui
+    restart: unless-stopped
+    networks:
+      - culrecords-net
+
+  staff-frontend:
+    build: ./frontend-staff
+    container_name: culrecords-staff-ui
+    restart: unless-stopped
+    networks:
+      - culrecords-net
+
   nginx:
     image: nginx:alpine
     container_name: culrecords-proxy
@@ -53,6 +67,8 @@ services:
       - uploads_data:/app/uploads:ro
     depends_on:
       - backend
+      - student-frontend
+      - staff-frontend
     networks:
       - culrecords-net
 

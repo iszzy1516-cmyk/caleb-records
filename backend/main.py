@@ -45,7 +45,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./caleb_records.db")
 UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", "./uploads"))
 MAX_FILE_SIZE = int(os.environ.get("MAX_FILE_SIZE", 10 * 1024 * 1024))  # 10MB
 
-CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://localhost:5174,http://localhost:8000,https://tauri.localhost").split(",")
+CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://localhost:5174,http://localhost:8000,https://tauri.localhost,http://141.147.48.186,https://141.147.48.186").split(",")
 
 # SMTP Configuration for password reset emails
 SMTP_HOST = os.environ.get("SMTP_HOST", "")

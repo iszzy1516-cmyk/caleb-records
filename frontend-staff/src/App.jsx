@@ -28,7 +28,7 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/staff">
         <AppRoutes />
       </BrowserRouter>
     </AuthProvider>
