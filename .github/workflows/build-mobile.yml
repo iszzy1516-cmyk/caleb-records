@@ -43,6 +43,21 @@ jobs:
           rustup target add i686-linux-android
           rustup target add x86_64-linux-android
 
+      - name: Configure Android linkers
+        run: |
+          NDK="${ANDROID_SDK_ROOT}/ndk/27.0.11718014/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          mkdir -p src-tauri/.cargo
+          cat > src-tauri/.cargo/config.toml << CARGOCONF
+          [target.aarch64-linux-android]
+          linker = "$NDK/aarch64-linux-android24-clang"
+          [target.armv7-linux-androideabi]
+          linker = "$NDK/armv7a-linux-androideabi24-clang"
+          [target.i686-linux-android]
+          linker = "$NDK/i686-linux-android24-clang"
+          [target.x86_64-linux-android]
+          linker = "$NDK/x86_64-linux-android24-clang"
+          CARGOCONF
+
       - name: Install frontend dependencies
         run: npm install
 
@@ -52,21 +67,57 @@ jobs:
       - name: Init Android project
         run: cargo tauri android init
 
-      - name: Enable universal APK
+      - name: Patch Gradle for universal APK
         run: |
-          sed -i 's|// splits {|splits {|' src-tauri/gen/android/app/build.gradle.kts
-          sed -i 's|//   abi {|  abi {|' src-tauri/gen/android/app/build.gradle.kts
-          sed -i 's|//     isEnable = true|    isEnable = true|' src-tauri/gen/android/app/build.gradle.kts
-          sed -i 's|//     reset()|    reset()|' src-tauri/gen/android/app/build.gradle.kts
-          sed -i 's|//     include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")|    include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")|' src-tauri/gen/android/app/build.gradle.kts
-          sed -i 's|//     isUniversalApk = true|    isUniversalApk = true|' src-tauri/gen/android/app/build.gradle.kts
-          sed -i 's|//   }|  }|' src-tauri/gen/android/app/build.gradle.kts
-          sed -i 's|// }|}|' src-tauri/gen/android/app/build.gradle.kts
+          python3 << 'PYEOF'
+          import os
+          gradle = 'src-tauri/gen/android/app/build.gradle.kts'
+          with open(gradle, 'r') as f:
+              content = f.read()
+          
+          splits = '''
+          \n    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            isUniversalApk = true
+        }
+    }\n'''
+          
+          # Insert before the last closing brace of the android block
+          # Find the android { block and insert before its closing }
+          lines = content.split('\n')
+          depth = 0
+          in_android = False
+          insert_idx = -1
+          for i, line in enumerate(lines):
+              if 'android {' in line:
+                  in_android = True
+              if in_android:
+                  depth += line.count('{') - line.count('}')
+                  if depth == 0 and '}' in line:
+                      insert_idx = i
+                      break
+          
+          if insert_idx > 0:
+              lines.insert(insert_idx, splits)
+              with open(gradle, 'w') as f:
+                  f.write('\n'.join(lines))
+              print('Patched build.gradle.kts for universal APK')
+          else:
+              print('Could not find android block, appending at end')
+              with open(gradle, 'a') as f:
+                  f.write('\nandroid {' + splits + '}\n')
+          PYEOF
 
       - name: Build APK
         run: cargo tauri android build --apk
         env:
           NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/27.0.11718014
+
+      - name: List APKs
+        run: find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -exec ls -lh {} \;
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4
