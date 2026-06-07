@@ -15,9 +15,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application
 COPY main.py .
-COPY uploads/ ./uploads/
 
-# Create uploads directory if missing
+# Create uploads directory (empty on fresh deploy)
 RUN mkdir -p uploads
 
 # Expose port
