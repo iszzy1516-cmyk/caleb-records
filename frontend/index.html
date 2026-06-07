@@ -13,12 +13,20 @@
       (function() {
         function addBackButton() {
           if (!window.__TAURI__) return;
+          // Detect mobile by screen width / user agent
+          const isMobile = window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
           const btn = document.createElement('button');
-          btn.innerHTML = '← Back to Launcher';
+          btn.innerHTML = isMobile ? '← Home' : '← Back to Launcher';
           btn.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:9999;background:#00843D;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-family:sans-serif;font-weight:600;transition:opacity .2s;';
           btn.onmouseenter = function() { btn.style.opacity = '0.9'; };
           btn.onmouseleave = function() { btn.style.opacity = '1'; };
-          btn.onclick = function() { window.close(); };
+          btn.onclick = function() {
+            if (isMobile) {
+              window.location.href = '/';
+            } else {
+              window.close();
+            }
+          };
           document.body.appendChild(btn);
         }
         if (document.readyState === 'loading') {
