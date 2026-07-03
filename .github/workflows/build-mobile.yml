@@ -123,6 +123,7 @@ jobs:
         run: cargo tauri android build --apk --debug
         env:
           NDK_HOME: ${{ env.NDK_HOME }}
+          VITE_API_URL: https://culrecords.duckdns.org
 
       - name: List APKs
         run: find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -exec ls -lh {} \;

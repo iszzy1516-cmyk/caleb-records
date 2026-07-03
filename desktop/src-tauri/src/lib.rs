@@ -7,7 +7,7 @@ struct AppState {
 
 #[tauri::command]
 async fn check_backend_status() -> bool {
-    tokio::net::TcpStream::connect("141.147.48.186:80").await.is_ok()
+    tokio::net::TcpStream::connect("culrecords.duckdns.org:443").await.is_ok()
 }
 
 #[tauri::command]
@@ -22,7 +22,7 @@ async fn open_staff_portal(app: tauri::AppHandle) -> Result<(), String> {
     tauri::WebviewWindowBuilder::new(
         &app,
         "staff",
-        tauri::WebviewUrl::External("http://141.147.48.186/staff/".parse().unwrap()),
+        tauri::WebviewUrl::External("https://culrecords.duckdns.org/staff/".parse().unwrap()),
     )
     .title("Caleb Records — Staff Portal")
     .inner_size(1280.0, 800.0)

@@ -1,8 +1,14 @@
 function getApiBase() {
-  if (typeof window !== 'undefined' && window.__TAURI__) {
-    return 'http://141.147.48.186';
+  // Use explicit API URL if set (build-time env var)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
   }
-  return import.meta.env.VITE_API_URL || ''; // Web frontend uses VITE_API_URL if set, otherwise same-domain
+  // Tauri mobile/desktop app connects to live server
+  if (typeof window !== 'undefined' && window.__TAURI__) {
+    return 'https://culrecords.duckdns.org';
+  }
+  // Web frontend uses same-domain relative path
+  return '';
 }
 
 const API_BASE = getApiBase();

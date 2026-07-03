@@ -1,10 +1,14 @@
 function getApiBase() {
+  // Use explicit API URL if set (build-time env var)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
   // Tauri mobile/desktop app connects to live server
   if (typeof window !== 'undefined' && window.__TAURI__) {
-    return 'http://141.147.48.186';
+    return 'https://culrecords.duckdns.org';
   }
-  // Web frontend uses VITE_API_URL if set (e.g. local dev), otherwise same-domain relative path
-  return import.meta.env.VITE_API_URL || '';
+  // Web frontend uses same-domain relative path
+  return '';
 }
 
 const API_BASE = getApiBase();

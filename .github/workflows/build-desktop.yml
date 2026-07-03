@@ -58,6 +58,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_API_URL: https://culrecords.duckdns.org
         with:
           projectPath: desktop
           args: ${{ matrix.args }}
