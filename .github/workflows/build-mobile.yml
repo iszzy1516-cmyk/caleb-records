@@ -63,6 +63,9 @@ jobs:
       - name: Init Android project
         run: cargo tauri android init
 
+      - name: Install Pillow
+        run: pip install Pillow
+
       - name: Replace Android launcher icons
         run: |
           python3 -c "
