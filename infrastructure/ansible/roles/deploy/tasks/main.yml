@@ -90,6 +90,17 @@
     group: ubuntu
     mode: '0755'
 
+- name: Check if app directory is a git repository
+  ansible.builtin.stat:
+    path: "{{ app_dir }}/.git"
+  register: git_dir
+
+- name: Remove non-git app directory to allow fresh clone
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: absent
+  when: not git_dir.stat.exists
+
 - name: Clone or update application repository
   ansible.builtin.git:
     repo: "{{ git_repo }}"
