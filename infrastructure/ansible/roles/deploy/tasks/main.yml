@@ -177,7 +177,6 @@
     owner: ubuntu
     group: ubuntu
     mode: '0755'
-  become_user: ubuntu
 
 - name: Obtain SSL certificate with Certbot standalone
   ansible.builtin.command:
