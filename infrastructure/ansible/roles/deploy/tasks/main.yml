@@ -197,9 +197,9 @@
     mode: '0644'
   when: domain_name | length > 0 and use_ssl | bool and certbot_result.rc == 0
 
-- name: Reload nginx with SSL config
+- name: Restart nginx container to pick up SSL config
   ansible.builtin.command:
-    cmd: docker compose -f docker-compose.yml -f docker-compose.override.yml exec -T nginx nginx -s reload
+    cmd: docker compose -f docker-compose.yml -f docker-compose.override.yml restart nginx
     chdir: "{{ app_dir }}"
   become_user: ubuntu
   when: domain_name | length > 0 and use_ssl | bool and certbot_result.rc == 0
