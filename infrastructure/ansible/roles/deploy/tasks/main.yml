@@ -145,7 +145,7 @@
 
 - name: Deploy with Docker Compose
   ansible.builtin.command:
-    cmd: docker compose up -d --build
+    cmd: docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build
     chdir: "{{ app_dir }}"
   become_user: ubuntu
 
@@ -161,7 +161,7 @@
 
 - name: Create database tables
   ansible.builtin.command:
-    cmd: docker compose exec -T backend python -c "from main import Base, engine; Base.metadata.create_all(bind=engine); print('Tables created')"
+    cmd: docker compose -f docker-compose.yml -f docker-compose.override.yml exec -T backend python -c "from main import Base, engine; Base.metadata.create_all(bind=engine); print('Tables created')"
     chdir: "{{ app_dir }}"
   become_user: ubuntu
   register: create_tables_result
@@ -199,7 +199,7 @@
 
 - name: Reload nginx with SSL config
   ansible.builtin.command:
-    cmd: docker compose exec -T nginx nginx -s reload
+    cmd: docker compose -f docker-compose.yml -f docker-compose.override.yml exec -T nginx nginx -s reload
     chdir: "{{ app_dir }}"
   become_user: ubuntu
   when: domain_name | length > 0 and use_ssl | bool and certbot_result.rc == 0
@@ -209,7 +209,7 @@
     name: "Backup CU-Records database"
     minute: "0"
     hour: "2"
-    job: "cd {{ app_dir }} && docker compose exec -T db pg_dump -U {{ db_user }} {{ db_name }} > /home/ubuntu/backups/culrecords_$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).sql"
+    job: "cd {{ app_dir }} && docker compose -f docker-compose.yml -f docker-compose.override.yml exec -T db pg_dump -U {{ db_user }} {{ db_name }} > /home/ubuntu/backups/culrecords_$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).sql"
     user: ubuntu
   when: s3_backup_bucket | length == 0
 
