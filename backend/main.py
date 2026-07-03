@@ -18,7 +18,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile, F
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -676,6 +676,24 @@ def create_app() -> FastAPI:
             return response
 
     app.add_middleware(SecurityHeadersMiddleware)
+
+    # Handle CORS preflight robustly for mobile webviews that send OPTIONS
+    # without standard Access-Control-Request-Method headers.
+    class OptionsCorsMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request: Request, call_next):
+            if request.method == "OPTIONS":
+                origin = request.headers.get("origin", "")
+                response = Response(status_code=200)
+                allowed_origin = origin if origin in CORS_ORIGINS else (CORS_ORIGINS[0] if CORS_ORIGINS else "*")
+                response.headers["Access-Control-Allow-Origin"] = allowed_origin
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+                response.headers["Access-Control-Allow-Headers"] = "*"
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                response.headers["Access-Control-Max-Age"] = "86400"
+                return response
+            return await call_next(request)
+
+    app.add_middleware(OptionsCorsMiddleware)
 
     return app
 
