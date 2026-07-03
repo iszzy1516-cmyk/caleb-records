@@ -1,34 +1,60 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 
 export default function Settings() {
   const navigate = useNavigate();
-  const [apiUrl, setApiUrl] = useState('');
-  const [saved, setSaved] = useState(false);
+  const { logout } = useAuth();
+  const [darkMode, setDarkMode] = useState(false);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordMessage, setPasswordMessage] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [changing, setChanging] = useState(false);
 
   useEffect(() => {
-    const savedUrl = localStorage.getItem('cul_api_url');
-    setApiUrl(savedUrl || '');
+    const saved = localStorage.getItem('cul_dark_mode') === 'true';
+    setDarkMode(saved);
+    document.documentElement.classList.toggle('dark', saved);
   }, []);
 
-  const handleSave = () => {
-    if (apiUrl.trim()) {
-      localStorage.setItem('cul_api_url', apiUrl.trim());
-    } else {
-      localStorage.removeItem('cul_api_url');
+  const toggleDarkMode = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    localStorage.setItem('cul_dark_mode', String(next));
+    document.documentElement.classList.toggle('dark', next);
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordMessage('');
+    setPasswordError('');
+
+    if (newPassword.length < 4) {
+      setPasswordError('New password must be at least 4 characters');
+      return;
     }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
 
-  const handleReset = () => {
-    localStorage.removeItem('cul_api_url');
-    setApiUrl('');
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setChanging(true);
+    try {
+      await api.changePassword(currentPassword, newPassword);
+      setPasswordMessage('Password changed successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setPasswordError(err.message || 'Failed to change password');
+    } finally {
+      setChanging(false);
+    }
   };
-
-  const isTauri = typeof window !== 'undefined' && !!window.__TAURI__;
 
   return (
     <div className="portal-page">
@@ -47,85 +73,121 @@ export default function Settings() {
       </nav>
 
       <div className="container" style={{ paddingTop: '1.5rem', maxWidth: '600px' }}>
-        <div className="card">
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
           <div className="card-header">
             <h2>⚙️ Settings</h2>
           </div>
           <div style={{ padding: '1.5rem' }}>
+            {/* Appearance */}
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>
-                Server URL
-              </label>
-              <input
-                type="url"
-                value={apiUrl}
-                onChange={(e) => setApiUrl(e.target.value)}
-                placeholder="e.g. http://192.168.1.100:8000"
+              <h4 style={{ marginBottom: '0.75rem' }}>Appearance</h4>
+              <label
                 style={{
-                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                   padding: '0.75rem',
-                  borderRadius: '8px',
                   border: '1px solid #e5e7eb',
-                  fontSize: '1rem',
-                }}
-              />
-              <small style={{ color: '#6b7280', display: 'block', marginTop: '0.5rem' }}>
-                Leave empty to use the default server. You must restart the app after changing this.
-              </small>
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
-              <button
-                onClick={handleSave}
-                style={{
-                  background: '#00843D',
-                  color: '#fff',
-                  border: 'none',
-                  padding: '0.6rem 1.2rem',
                   borderRadius: '8px',
-                  fontWeight: 600,
                   cursor: 'pointer',
                 }}
               >
-                Save
-              </button>
-              <button
-                onClick={handleReset}
-                style={{
-                  background: '#e5e7eb',
-                  color: '#374151',
-                  border: 'none',
-                  padding: '0.6rem 1.2rem',
-                  borderRadius: '8px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Reset to Default
-              </button>
+                <span>Dark mode</span>
+                <input
+                  type="checkbox"
+                  checked={darkMode}
+                  onChange={toggleDarkMode}
+                  style={{ width: '1.25rem', height: '1.25rem', cursor: 'pointer' }}
+                />
+              </label>
             </div>
-
-            {saved && (
-              <div className="alert alert-success" style={{ marginBottom: '1rem' }}>
-                Settings saved! Please reload the app.
-              </div>
-            )}
 
             <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '1.5rem 0' }} />
 
+            {/* Change Password */}
             <div>
-              <h4 style={{ marginBottom: '0.5rem' }}>About</h4>
-              <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>
-                Caleb University Records — Student Mobile App
-              </p>
-              <p style={{ color: '#6b7280', fontSize: '0.85rem', marginTop: '0.25rem' }}>
-                Version 1.0.0
-              </p>
-              {isTauri && (
-                <p style={{ color: '#00843D', fontSize: '0.8rem', marginTop: '0.25rem' }}>
-                  🚀 Running as native mobile app
-                </p>
-              )}
+              <h4 style={{ marginBottom: '0.75rem' }}>Change Password</h4>
+              <form onSubmit={handleChangePassword}>
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label" htmlFor="currentPassword">Current Password</label>
+                  <input
+                    id="currentPassword"
+                    type="password"
+                    className="form-input"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label" htmlFor="newPassword">New Password</label>
+                  <input
+                    id="newPassword"
+                    type="password"
+                    className="form-input"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    minLength={4}
+                    autoComplete="new-password"
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label" htmlFor="confirmPassword">Confirm New Password</label>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    className="form-input"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    autoComplete="new-password"
+                  />
+                </div>
+
+                {passwordError && (
+                  <div className="alert alert-error" style={{ marginBottom: '1rem' }}>
+                    {passwordError}
+                  </div>
+                )}
+                {passwordMessage && (
+                  <div className="alert alert-success" style={{ marginBottom: '1rem' }}>
+                    {passwordMessage}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={changing}
+                >
+                  {changing ? (
+                    <>
+                      <div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px', display: 'inline-block', verticalAlign: 'middle', marginRight: '0.5rem' }} />
+                      Changing...
+                    </>
+                  ) : (
+                    'Change Password'
+                  )}
+                </button>
+              </form>
+            </div>
+
+            <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '1.5rem 0' }} />
+
+            {/* Session */}
+            <div>
+              <h4 style={{ marginBottom: '0.75rem' }}>Session</h4>
+              <button
+                onClick={logout}
+                className="btn btn-outline"
+                style={{ color: '#dc2626', borderColor: '#dc2626' }}
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>

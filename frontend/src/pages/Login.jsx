@@ -32,7 +32,7 @@ export default function Login() {
       <div className="login-card">
         <div className="login-logo">
           <img src="/caleb-logo.jpg" alt="Caleb University Logo" />
-          <h1>CU-Records</h1>
+          <h1>CUL-Records</h1>
           <span>Staff Portal — Caleb University</span>
           <span style={{ fontSize: '0.75rem', color: 'var(--cul-gray-400)', marginTop: '0.5rem', fontStyle: 'italic' }}>
             For God and Humanity

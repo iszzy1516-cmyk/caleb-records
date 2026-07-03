@@ -3,8 +3,8 @@ function getApiBase() {
   if (typeof window !== 'undefined' && window.__TAURI__) {
     return 'http://141.147.48.186';
   }
-  // Web frontend uses same-domain relative path
-  return '';
+  // Web frontend uses VITE_API_URL if set (e.g. local dev), otherwise same-domain relative path
+  return import.meta.env.VITE_API_URL || '';
 }
 
 const API_BASE = getApiBase();
@@ -164,9 +164,10 @@ export const api = {
   // Document deadlines (public)
   getDocumentDeadlines: () => request('/api/document-deadlines'),
 
-  // Password Reset
+  // Password
   requestPasswordReset: (matric) => request('/api/password-reset-request', { method: 'POST', body: JSON.stringify({ matric_number: matric }) }),
   confirmPasswordReset: (token, newPassword) => request('/api/password-reset', { method: 'POST', body: JSON.stringify({ token, new_password: newPassword }) }),
+  changePassword: (currentPassword, newPassword) => request('/api/me/change-password', { method: 'POST', body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }) }),
 
   // Public
   publicStudentLookup: (matric) => request(`/api/public/students/${encodeURIComponent(matric)}`),

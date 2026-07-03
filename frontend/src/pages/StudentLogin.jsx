@@ -16,18 +16,25 @@ export default function StudentLogin() {
     e.preventDefault();
     setError('');
     setLoading(true);
+    console.log('[StudentLogin] submitting', { matric: matric.trim().toUpperCase() });
 
     try {
       const data = await api.studentLogin(matric.trim().toUpperCase(), password);
+      console.log('[StudentLogin] login success', data);
       login(
         data.access_token,
         { matric_number: data.matric_number, full_name: data.full_name },
         'student'
       );
-      navigate('/student-dashboard');
+      console.log('[StudentLogin] stored auth, navigating to dashboard');
+      // Small delay ensures localStorage is flushed before navigation
+      setTimeout(() => {
+        console.log('[StudentLogin] navigating now');
+        window.location.href = '/student-dashboard';
+      }, 100);
     } catch (err) {
+      console.error('[StudentLogin] login error', err);
       setError(err.message || 'Invalid matric number or password');
-    } finally {
       setLoading(false);
     }
   };
@@ -57,7 +64,7 @@ export default function StudentLogin() {
               id="matric"
               type="text"
               className="form-input"
-              placeholder="e.g. CUL/2024/0001"
+              placeholder="e.g. 22/11220"
               value={matric}
               onChange={(e) => setMatric(e.target.value)}
               required

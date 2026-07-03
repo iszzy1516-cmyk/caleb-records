@@ -5,7 +5,6 @@ import { api } from '../services/api';
 export default function StudentDashboard() {
   const { user, logout } = useAuth();
   const [student, setStudent] = useState(null);
-  const [grades, setGrades] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -25,14 +24,12 @@ export default function StudentDashboard() {
     setLoading(true);
     setError('');
     try {
-      const [meData, gradesData, alertsData, deadlinesData] = await Promise.all([
+      const [meData, alertsData, deadlinesData] = await Promise.all([
         api.getMe(),
-        api.getMyGrades(),
         api.getMyAlerts(),
         api.getDocumentDeadlines(),
       ]);
       setStudent(meData);
-      setGrades(gradesData);
       setAlerts(alertsData);
       setDeadlines(deadlinesData);
     } catch (err) {
@@ -89,8 +86,6 @@ export default function StudentDashboard() {
     }
   };
 
-  const gradePoints = { A: 5, B: 4, C: 3, D: 2, E: 1, F: 0 };
-
   if (loading) {
     return (
       <div className="portal-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
@@ -146,7 +141,19 @@ export default function StudentDashboard() {
               {alerts.filter((a) => !a.is_read).slice(0, 3).map((alert) => (
                 <div key={alert.id} style={{ padding: '0.75rem', background: 'var(--cul-danger-light)', borderRadius: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
                   <span style={{ fontSize: '0.875rem' }}>{alert.message}</span>
-                  <button className="btn btn-sm btn-outline" onClick={async () => { await api.markAlertRead(alert.id); loadData(); }}>
+                  <button
+                    className="btn btn-sm btn-outline"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      try {
+                        await api.markAlertRead(alert.id);
+                        setAlerts((prev) => prev.map((a) => (a.id === alert.id ? { ...a, is_read: true } : a)));
+                      } catch (err) {
+                        setError(err.message || 'Failed to dismiss alert');
+                      }
+                    }}
+                  >
                     Dismiss
                   </button>
                 </div>
@@ -195,9 +202,7 @@ export default function StudentDashboard() {
           <button className={`tab ${activeTab === 'upload' ? 'active' : ''}`} onClick={() => setActiveTab('upload')}>
             Upload Document
           </button>
-          <button className={`tab ${activeTab === 'grades' ? 'active' : ''}`} onClick={() => setActiveTab('grades')}>
-            My Grades
-          </button>
+
         </div>
 
         {/* Documents Tab */}
@@ -383,58 +388,6 @@ export default function StudentDashboard() {
           </div>
         )}
 
-        {/* Grades Tab */}
-        {activeTab === 'grades' && (
-          <div className="card">
-            <div className="card-header">
-              <h3>Academic Records</h3>
-              {grades?.cgpa !== undefined && grades?.cgpa !== null && (
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--cul-green)' }}>
-                    {grades.cgpa.toFixed(2)}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--cul-gray-500)' }}>CGPA</div>
-                </div>
-              )}
-            </div>
-            {grades?.records?.length > 0 ? (
-              <div className="table-container">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Course</th>
-                      <th>Title</th>
-                      <th>Units</th>
-                      <th>Grade</th>
-                      <th>Session</th>
-                      <th>Semester</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {grades.records.map((rec) => (
-                      <tr key={rec.id}>
-                        <td style={{ fontWeight: 600 }}>{rec.course?.code}</td>
-                        <td>{rec.course?.title}</td>
-                        <td>{rec.course?.credit_units}</td>
-                        <td>
-                          <span className={`badge badge-${gradePoints[rec.grade] >= 3 ? 'green' : gradePoints[rec.grade] >= 2 ? 'yellow' : 'red'}`}>
-                            {rec.grade}
-                          </span>
-                        </td>
-                        <td>{rec.session}</td>
-                        <td>{rec.semester}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="text-center" style={{ padding: '2rem', color: 'var(--cul-gray-500)' }}>
-                No grades recorded yet.
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Footer */}

@@ -1,0 +1,207 @@
+---
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install required packages
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - software-properties-common
+      - python3-pip
+      - python3-venv
+      - git
+      - certbot
+    state: present
+
+- name: Ensure swap file exists
+  ansible.builtin.command:
+    cmd: fallocate -l 2G /swapfile
+    creates: /swapfile
+
+- name: Set swap file permissions
+  ansible.builtin.file:
+    path: /swapfile
+    mode: '0600'
+
+- name: Format swap file
+  ansible.builtin.command:
+    cmd: mkswap /swapfile
+  when: ansible_swaptotal_mb == 0
+
+- name: Enable swap file
+  ansible.builtin.command:
+    cmd: swapon /swapfile
+  when: ansible_swaptotal_mb == 0
+
+- name: Persist swap in fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    line: "/swapfile none swap sw 0 0"
+    state: present
+
+- name: Add Docker GPG key
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    keyring: /usr/share/keyrings/docker-archive-keyring.gpg
+    state: present
+
+- name: Add Docker repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+
+- name: Install Docker Engine
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: true
+
+- name: Add ubuntu user to docker group
+  ansible.builtin.user:
+    name: ubuntu
+    groups: docker
+    append: true
+
+- name: Reset ssh connection to apply group change
+  ansible.builtin.meta: reset_connection
+
+- name: Ensure Docker is running
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Ensure app directory exists
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
+- name: Clone or update application repository
+  ansible.builtin.git:
+    repo: "{{ git_repo }}"
+    dest: "{{ app_dir }}"
+    version: "{{ git_branch }}"
+    force: true
+  become_user: ubuntu
+
+- name: Create production environment file
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ app_dir }}/.env"
+    owner: ubuntu
+    group: ubuntu
+    mode: '0600'
+  become_user: ubuntu
+
+- name: Create Docker Compose override for production ports
+  ansible.builtin.copy:
+    content: |
+      services:
+        nginx:
+          ports:
+            - "80:80"
+            - "443:443"
+    dest: "{{ app_dir }}/docker-compose.override.yml"
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+  become_user: ubuntu
+
+- name: Ensure uploads directory exists
+  ansible.builtin.file:
+    path: "{{ app_dir }}/uploads"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+  become_user: ubuntu
+
+- name: Deploy with Docker Compose
+  ansible.builtin.command:
+    cmd: docker compose up -d --build
+    chdir: "{{ app_dir }}"
+  become_user: ubuntu
+
+- name: Wait for services to start
+  ansible.builtin.uri:
+    url: "http://localhost:80/health"
+    status_code: 200
+  register: health_check
+  until: health_check.status == 200
+  retries: 15
+  delay: 10
+
+- name: Create database tables
+  ansible.builtin.command:
+    cmd: docker compose exec -T backend python -c "from main import Base, engine; Base.metadata.create_all(bind=engine); print('Tables created')"
+    chdir: "{{ app_dir }}"
+  become_user: ubuntu
+  register: create_tables_result
+  changed_when: "'Tables created' in create_tables_result.stdout"
+
+- name: Seed reference data
+  ansible.builtin.command:
+    cmd: docker compose exec -T backend python -c "from main import seed_data, SessionLocal; db = SessionLocal(); seed_data(db); print('Reference data seeded')"
+    chdir: "{{ app_dir }}"
+  become_user: ubuntu
+  register: seed_result
+  changed_when: "'Reference data seeded' in seed_result.stdout"
+
+- name: Ensure certbot renewal directory exists
+  ansible.builtin.file:
+    path: /etc/letsencrypt
+    state: directory
+    mode: '0755'
+
+- name: Create certbot webroot directory
+  ansible.builtin.file:
+    path: "{{ app_dir }}/certbot/www"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+  become_user: ubuntu
+
+- name: Obtain SSL certificate with Certbot standalone
+  ansible.builtin.command:
+    cmd: "certbot certonly --standalone -d {{ domain_name }} --non-interactive --agree-tos --email admin@{{ domain_name }}"
+  when: domain_name | length > 0 and use_ssl | bool
+  ignore_errors: true
+
+- name: Set up daily database backups
+  ansible.builtin.cron:
+    name: "Backup CU-Records database"
+    minute: "0"
+    hour: "2"
+    job: "cd {{ app_dir }} && docker compose exec -T db pg_dump -U {{ db_user }} {{ db_name }} > /home/ubuntu/backups/culrecords_$(date +\\%Y\\%m\\%d_\\%H\\%M\\%S).sql"
+    user: ubuntu
+  when: s3_backup_bucket | length == 0
+
+- name: Ensure backup directory exists
+  ansible.builtin.file:
+    path: /home/ubuntu/backups
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
+- name: Display deployment info
+  ansible.builtin.debug:
+    msg:
+      - "CU-Records deployed successfully!"
+      - "Access the app at: http://{{ ansible_host }}"
+      - "API health check: http://{{ ansible_host }}/health"

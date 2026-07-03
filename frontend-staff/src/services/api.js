@@ -1,6 +1,11 @@
-const API_BASE = (typeof window !== 'undefined' && window.__TAURI__)
-  ? 'http://141.147.48.186'
-  : ''; // Web frontend uses same-domain relative path
+function getApiBase() {
+  if (typeof window !== 'undefined' && window.__TAURI__) {
+    return 'http://141.147.48.186';
+  }
+  return import.meta.env.VITE_API_URL || ''; // Web frontend uses VITE_API_URL if set, otherwise same-domain
+}
+
+const API_BASE = getApiBase();
 
 function getToken() {
   return localStorage.getItem('cul_token');
@@ -151,6 +156,13 @@ export const api = {
 
   // Audit logs
   getAuditLogs: (limit = 50) => request(`/api/audit-logs?limit=${limit}`),
+
+  // User management
+  createUser: (data) => request('/api/users', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Staff Registration with OTP
+  requestStaffRegistration: (data) => request('/api/staff/register-request', { method: 'POST', body: JSON.stringify(data) }),
+  verifyStaffRegistration: (data) => request('/api/staff/register-verify', { method: 'POST', body: JSON.stringify(data) }),
 
   // Password Reset
   requestPasswordReset: (matric) => request('/api/password-reset-request', { method: 'POST', body: JSON.stringify({ matric_number: matric }) }),

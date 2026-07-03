@@ -171,9 +171,26 @@ class User(Base):
     username = Column(String, unique=True, nullable=False)
     full_name = Column(String, nullable=True)
     email = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    department = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
     role = Column(String, default="records_officer")
     is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class StaffRegistration(Base):
+    __tablename__ = "staff_registrations"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, nullable=False)
+    full_name = Column(String, nullable=True)
+    email = Column(String, nullable=False, index=True)
+    phone = Column(String, nullable=True)
+    department = Column(String, nullable=True)
+    hashed_password = Column(String, nullable=False)
+    role = Column(String, default="records_officer")
+    otp = Column(String, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class AuditLog(Base):
@@ -231,6 +248,7 @@ class Token(BaseModel):
     token_type: str = "bearer"
     role: str
     username: str
+    email: str
     full_name: Optional[str] = None
 
 class CollegeOut(BaseModel):
@@ -263,6 +281,7 @@ class CourseOut(BaseModel):
     semester: str
 
 class StudentCreate(BaseModel):
+    matric_number: str
     first_name: str
     last_name: str
     email: Optional[str] = None
@@ -359,15 +378,33 @@ class MissingDocReport(BaseModel):
 class UserCreate(BaseModel):
     username: str
     full_name: Optional[str] = None
-    email: Optional[str] = None
+    email: str
+    phone: Optional[str] = None
+    department: Optional[str] = None
     password: str
     role: str = "records_officer"
+
+class StaffRegisterRequest(BaseModel):
+    username: str
+    full_name: Optional[str] = None
+    email: str
+    phone: Optional[str] = None
+    department: Optional[str] = None
+    password: str = Field(min_length=6)
+
+class StaffRegisterVerify(BaseModel):
+    email: str
+    otp: str
 
 class PasswordResetRequest(BaseModel):
     matric_number: str
 
 class PasswordResetConfirm(BaseModel):
     token: str
+    new_password: str = Field(min_length=4)
+
+class PasswordChange(BaseModel):
+    current_password: str
     new_password: str = Field(min_length=4)
 
 class AlertOut(BaseModel):
@@ -453,13 +490,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
+        email: str = payload.get("sub")
+        if email is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
-    user = db.query(User).filter(User.username == username).first()
+    user = db.query(User).filter(User.email == email).first()
     if user is None or not user.is_active:
         raise credentials_exception
     return user
@@ -483,6 +520,34 @@ def get_current_student(token: str = Depends(oauth2_scheme), db: Session = Depen
     if student is None or student.status != "active":
         raise credentials_exception
     return student
+
+def get_current_user_or_student(
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        sub: str = payload.get("sub")
+        token_type: str = payload.get("type")
+        if sub is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    if token_type == "student":
+        student = db.query(Student).filter(Student.matric_number == sub).first()
+        if student is None or student.status != "active":
+            raise credentials_exception
+        return {"type": "student", "actor": student}
+
+    user = db.query(User).filter(User.email == sub).first()
+    if user is None or not user.is_active:
+        raise credentials_exception
+    return {"type": "staff", "actor": user}
 
 def require_roles(*roles: str):
     def checker(user: User = Depends(get_current_user)):
@@ -523,6 +588,9 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
 def generate_reset_token() -> str:
     return secrets.token_urlsafe(32)
 
+def generate_otp(length: int = 6) -> str:
+    return ''.join(secrets.choice('0123456789') for _ in range(length))
+
 # ─── Audit Logging ───────────────────────────────────────────────────────────
 
 def log_action(db: Session, username: str, action: str, table_name: str, record_id, details: str = ""):
@@ -538,11 +606,8 @@ def log_action(db: Session, username: str, action: str, table_name: str, record_
 
 # ─── Matric Number Generator ─────────────────────────────────────────────────
 
-def generate_matric_number(db: Session, admission_year: int) -> str:
-    year_short = str(admission_year)[-2:]
-    prefix = f"{year_short}/"
-    count = db.query(Student).filter(Student.matric_number.like(f"{prefix}%")).count()
-    return f"{prefix}{count + 1:05d}"
+def normalize_matric(value: str) -> str:
+    return value.strip().upper().replace(" ", "")
 
 # ─── CGPA Calculator ─────────────────────────────────────────────────────────
 
@@ -667,7 +732,7 @@ def _seed_reference_data(db: Session):
     db.commit()
 
 def _seed_default_user(db: Session):
-    if db.query(User).filter(User.username == "admin").first():
+    if db.query(User).filter(User.email == "admin@calebuniversity.edu.ng").first():
         return
     admin = User(
         username="admin",
@@ -690,18 +755,20 @@ app = create_app()
 @app.post("/token", response_model=Token)
 @limiter.limit("5/minute")
 def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == form_data.username).first()
+    email = form_data.username.lower().strip()
+    user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
     if not user.is_active:
         raise HTTPException(status_code=400, detail="User account is disabled")
 
-    access_token = create_access_token(data={"sub": user.username, "role": user.role, "type": "staff"})
+    access_token = create_access_token(data={"sub": user.email, "role": user.role, "type": "staff"})
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "role": user.role,
         "username": user.username,
+        "email": user.email,
         "full_name": user.full_name,
     }
 
@@ -756,7 +823,14 @@ def list_courses(level: Optional[int] = None, dept_id: Optional[int] = None, ski
 # ─── Student Routes ──────────────────────────────────────────────────────────
 
 def _create_student_internal(db: Session, data: StudentCreate, actor: str = "system") -> Student:
-    matric = generate_matric_number(db, data.admission_year)
+    matric = normalize_matric(data.matric_number)
+    if not matric:
+        raise ValueError("Matric number is required")
+    if "/" not in matric:
+        raise ValueError("Matric number must be in the format YEAR/NUMBER (e.g. 22/11220)")
+    if db.query(Student).filter(Student.matric_number == matric).first():
+        raise ValueError(f"Matric number {matric} already exists")
+
     default_password = f"Caleb{str(data.admission_year)[-2:]}"
     student = Student(
         matric_number=matric,
@@ -782,12 +856,18 @@ def _create_student_internal(db: Session, data: StudentCreate, actor: str = "sys
 
 @app.post("/api/students", response_model=StudentOut)
 def create_student(data: StudentCreate, db: Session = Depends(get_db), user: User = Depends(require_roles("records_officer", "admin", "hod"))):
-    return _create_student_internal(db, data, actor=user.username)
+    try:
+        return _create_student_internal(db, data, actor=user.username)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/students/register", response_model=StudentOut)
 @limiter.limit("3/minute")
 def student_self_register(request: Request, data: StudentCreate, db: Session = Depends(get_db)):
-    return _create_student_internal(db, data, actor="self-registration")
+    try:
+        return _create_student_internal(db, data, actor="self-registration")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/students/bulk", response_model=BulkStudentResult)
 @limiter.limit("10/minute")
@@ -1133,19 +1213,103 @@ def create_user(data: UserCreate, db: Session = Depends(get_db), user: User = De
     existing = db.query(User).filter(User.username == data.username).first()
     if existing:
         raise HTTPException(status_code=400, detail="Username already exists")
+    existing_email = db.query(User).filter(User.email == data.email.lower().strip()).first()
+    if existing_email:
+        raise HTTPException(status_code=400, detail="Email already exists")
 
     new_user = User(
         username=data.username,
         full_name=data.full_name,
-        email=data.email,
+        email=data.email.lower().strip(),
+        phone=data.phone,
+        department=data.department,
         hashed_password=get_password_hash(data.password),
         role=data.role,
         is_active=True,
     )
     db.add(new_user)
     db.commit()
-    log_action(db, user.username, "CREATE", "users", new_user.id, f"Created user {data.username} with role {data.role}")
-    return {"message": "User created successfully", "username": data.username}
+    log_action(db, user.username, "CREATE", "users", new_user.id, f"Created user {data.username} ({data.email}) with role {data.role}")
+    return {"message": "User created successfully", "username": data.username, "email": new_user.email, "role": new_user.role}
+
+@app.post("/api/staff/register-request", response_model=dict)
+@limiter.limit("10/minute")
+def staff_register_request(request: Request, data: StaffRegisterRequest, db: Session = Depends(get_db)):
+    email = data.email.lower().strip()
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="A staff account with this email already exists")
+    existing_username = db.query(User).filter(User.username == data.username).first()
+    if existing_username:
+        raise HTTPException(status_code=400, detail="Username already taken")
+
+    # Remove any pending registration for this email
+    db.query(StaffRegistration).filter(StaffRegistration.email == email).delete()
+
+    otp = generate_otp()
+    expires = datetime.utcnow() + timedelta(minutes=15)
+    registration = StaffRegistration(
+        username=data.username,
+        full_name=data.full_name,
+        email=email,
+        phone=data.phone,
+        department=data.department,
+        hashed_password=get_password_hash(data.password),
+        role="records_officer",
+        otp=otp,
+        expires_at=expires,
+    )
+    db.add(registration)
+    db.commit()
+
+    body = f"""Hello {data.full_name or data.username},
+
+You are registering for a CU-Records staff account.
+
+Your one-time verification code is: {otp}
+
+This code expires in 15 minutes.
+
+If you did not request this, please ignore this email.
+
+Caleb University Records Team
+For God and Humanity
+"""
+    send_email(email, "CU-Records Staff Registration OTP", body)
+    return {"message": "Verification code sent to your email"}
+
+@app.post("/api/staff/register-verify", response_model=dict)
+def staff_register_verify(data: StaffRegisterVerify, db: Session = Depends(get_db)):
+    email = data.email.lower().strip()
+    registration = db.query(StaffRegistration).filter(
+        StaffRegistration.email == email,
+        StaffRegistration.otp == data.otp.strip(),
+        StaffRegistration.verified == False,
+        StaffRegistration.expires_at > datetime.utcnow(),
+    ).first()
+
+    if not registration:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="A staff account with this email already exists")
+
+    new_user = User(
+        username=registration.username,
+        full_name=registration.full_name,
+        email=registration.email,
+        phone=registration.phone,
+        department=registration.department,
+        hashed_password=registration.hashed_password,
+        role="records_officer",
+        is_active=True,
+    )
+    db.add(new_user)
+    registration.verified = True
+    db.commit()
+    log_action(db, "system", "CREATE", "users", new_user.id, f"Self-registered staff user {new_user.username} ({new_user.email}) with role records_officer via OTP verification")
+    return {"message": "Staff account created successfully", "username": new_user.username, "email": new_user.email}
 
 # ─── Password Reset ──────────────────────────────────────────────────────────
 
@@ -1211,6 +1375,19 @@ def confirm_password_reset(data: PasswordResetConfirm, db: Session = Depends(get
 
     log_action(db, student.matric_number, "PASSWORD_RESET", "students", student.id, "Password reset successfully")
     return {"message": "Password reset successfully. You can now log in with your new password."}
+
+@app.post("/api/me/change-password", response_model=dict)
+def change_student_password(
+    data: PasswordChange,
+    student: Student = Depends(get_current_student),
+    db: Session = Depends(get_db),
+):
+    if not verify_password(data.current_password, student.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    student.hashed_password = get_password_hash(data.new_password)
+    db.commit()
+    log_action(db, student.matric_number, "PASSWORD_CHANGE", "students", student.id, "Password changed by student")
+    return {"message": "Password changed successfully"}
 
 # ─── Stats ───────────────────────────────────────────────────────────────────
 
@@ -1341,7 +1518,7 @@ def create_deadline(data: DocumentDeadlineCreate, db: Session = Depends(get_db),
     return dd
 
 @app.get("/api/document-deadlines", response_model=List[DocumentDeadlineOut])
-def list_deadlines(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def list_deadlines(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), actor: dict = Depends(get_current_user_or_student)):
     return [DocumentDeadlineOut.model_validate(d) for d in paginate(
         db.query(DocumentDeadline).filter(DocumentDeadline.is_active == True), skip, limit
     ).all()]

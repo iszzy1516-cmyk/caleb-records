@@ -20,6 +20,8 @@ Cargo.lock
 
 # Python
 venv/
+.venv/
+.venv-ansible/
 __pycache__/
 *.pyc
 *.pyo

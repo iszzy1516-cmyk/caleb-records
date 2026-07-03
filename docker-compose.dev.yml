@@ -1,3 +1,8 @@
+# Local development with separate ports for student and staff apps
+# Student:  http://localhost:8080/
+# Staff:    http://localhost:8081/staff/
+# API:      http://localhost:8000
+
 services:
   db:
     image: postgres:16-alpine
@@ -10,11 +15,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-calebrecords} -d ${DB_NAME:-calebrecords}"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
     networks:
       - culrecords-net
 
@@ -22,10 +26,12 @@ services:
     build: ./backend
     container_name: culrecords-api
     restart: unless-stopped
+    ports:
+      - "8000:8000"
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://${DB_USER:-calebrecords}:${DB_PASSWORD:-changeme}@db:5432/${DB_NAME:-calebrecords}}
       SECRET_KEY: ${SECRET_KEY}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8089}
+      CORS_ORIGINS: "http://localhost:8080,http://localhost:8081,http://localhost:8000,https://tauri.localhost"
       UPLOAD_DIR: /app/uploads
       MAX_FILE_SIZE: ${MAX_FILE_SIZE:-10485760}
       SMTP_HOST: ${SMTP_HOST}
@@ -41,19 +47,29 @@ services:
     networks:
       - culrecords-net
 
-  nginx:
+  student-frontend:
     build:
-      context: .
-      dockerfile: nginx/Dockerfile
-    container_name: culrecords-proxy
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000
+    container_name: culrecords-student-ui
     restart: unless-stopped
     ports:
-      - "8089:80"
-      - "8443:443"
-    volumes:
-      - uploads_data:/app/uploads:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - ./certbot/www:/var/www/certbot:ro
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - culrecords-net
+
+  staff-frontend:
+    build:
+      context: ./frontend-staff
+      args:
+        VITE_API_URL: http://localhost:8000
+    container_name: culrecords-staff-ui
+    restart: unless-stopped
+    ports:
+      - "8081:80"
     depends_on:
       - backend
     networks:

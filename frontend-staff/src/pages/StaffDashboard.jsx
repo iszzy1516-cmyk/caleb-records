@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Navbar from '../components/Navbar';
 import StudentSearch from '../components/StudentSearch';
+import StaffRegister from './StaffRegister';
 
 function Sidebar() {
   const { isAdmin } = useAuth();
@@ -11,16 +13,17 @@ function Sidebar() {
   const navigate = useNavigate();
 
   const items = [
-    { path: '/staff', label: 'Dashboard', icon: '📊' },
-    { path: '/staff/search', label: 'Search Students', icon: '🔍' },
-    { path: '/staff/register', label: 'Register Student', icon: '📝' },
-    { path: '/staff/upload', label: 'Upload Document', icon: '📁' },
-    { path: '/staff/missing', label: 'Missing Documents', icon: '⚠️' },
-    { path: '/staff/deadlines', label: 'Document Deadlines', icon: '⏰' },
+    { path: '/staff', label: 'Dashboard' },
+    { path: '/staff/search', label: 'Search Students' },
+    { path: '/staff/register', label: 'Register Student' },
+    { path: '/staff/upload', label: 'Upload Document' },
+    { path: '/staff/missing', label: 'Missing Documents' },
+    { path: '/staff/deadlines', label: 'Document Deadlines' },
   ];
 
   if (isAdmin) {
-    items.push({ path: '/staff/audit', label: 'Audit Logs', icon: '📋' });
+    items.push({ path: '/staff/register-staff', label: 'Register Staff' });
+    items.push({ path: '/staff/audit', label: 'Audit Logs' });
   }
 
   return (
@@ -33,7 +36,6 @@ function Sidebar() {
               onClick={(e) => { e.preventDefault(); navigate(item.path); }}
               className={location.pathname === item.path ? 'active' : ''}
             >
-              <span>{item.icon}</span>
               {item.label}
             </a>
           </li>
@@ -114,12 +116,16 @@ function DashboardHome() {
 function SearchPage() {
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(false);
+  const detailsRef = useRef(null);
 
   const handleSelect = async (student) => {
     setLoading(true);
     try {
       const data = await api.getStudent(student.id);
       setDetails(data);
+      setTimeout(() => {
+        detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
     } catch (err) {
       alert(err.message);
     } finally {
@@ -158,7 +164,7 @@ function SearchPage() {
       )}
 
       {details && !loading && (
-        <div className="card" style={{ marginTop: '1.5rem' }}>
+        <div ref={detailsRef} className="card" style={{ marginTop: '1.5rem' }}>
           <div className="card-header">
             <div>
               <h2>{details.first_name} {details.last_name}</h2>
@@ -172,7 +178,7 @@ function SearchPage() {
             <div className="doc-checklist">
               {docTypes.map((dt) => (
                 <div key={dt.key} className={`doc-checklist-item ${hasDoc(dt.key) ? 'present' : 'missing'}`}>
-                  <div className="doc-icon">{hasDoc(dt.key) ? '✓' : '✗'}</div>
+                  <div className="doc-icon">{hasDoc(dt.key) ? 'Yes' : 'No'}</div>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{dt.label}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--cul-gray-500)' }}>
@@ -183,7 +189,7 @@ function SearchPage() {
               ))}
               {[100, 200, 300, 400, 500].map((lvl) => (
                 <div key={lvl} className={`doc-checklist-item ${hasDoc('clearance_cert', lvl) ? 'present' : 'missing'}`}>
-                  <div className="doc-icon">{hasDoc('clearance_cert', lvl) ? '✓' : '✗'}</div>
+                  <div className="doc-icon">{hasDoc('clearance_cert', lvl) ? 'Yes' : 'No'}</div>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{lvl}L Clearance</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--cul-gray-500)' }}>
@@ -195,7 +201,7 @@ function SearchPage() {
             </div>
           </div>
 
-          {details.cgpa !== undefined && (
+          {details.cgpa != null && (
             <div style={{ background: 'var(--cul-green-light)', padding: '1rem', borderRadius: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.75rem' }}>
               <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--cul-green)' }}>{details.cgpa.toFixed(2)}</span>
               <span style={{ fontSize: '0.875rem', color: 'var(--cul-gray-600)' }}>CGPA</span>
@@ -210,7 +216,7 @@ function SearchPage() {
 function RegisterPage() {
   const [mode, setMode] = useState('single');
   const [form, setForm] = useState({
-    first_name: '', last_name: '', email: '', phone: '',
+    matric_number: '', first_name: '', last_name: '', email: '', phone: '',
     college_id: '', department_id: '', program_id: '',
     admission_year: new Date().getFullYear(), current_level: 100,
     gender: 'male', date_of_birth: '',
@@ -223,9 +229,10 @@ function RegisterPage() {
   const [error, setError] = useState('');
 
   // Bulk state
-  const [bulkJson, setBulkJson] = useState('');
+  const [bulkFile, setBulkFile] = useState(null);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkResult, setBulkResult] = useState(null);
+  const bulkInputRef = useRef(null);
 
   useEffect(() => {
     api.getColleges().then(setColleges).catch(() => {});
@@ -263,7 +270,7 @@ function RegisterPage() {
       const data = await api.createStudent(form);
       setSuccess(`Student registered successfully! Matric: ${data.matric_number}`);
       setForm({
-        first_name: '', last_name: '', email: '', phone: '',
+        matric_number: '', first_name: '', last_name: '', email: '', phone: '',
         college_id: '', department_id: '', program_id: '',
         admission_year: new Date().getFullYear(), current_level: 100,
         gender: 'male', date_of_birth: '',
@@ -275,16 +282,88 @@ function RegisterPage() {
     }
   };
 
+  const parseBulkFile = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+          resolve(json);
+        } catch (err) {
+          reject(new Error('Could not parse file. Make sure it is a valid CSV or Excel sheet.'));
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  const normalizeStudentRow = (row) => {
+    const get = (...keys) => {
+      for (const k of keys) {
+        if (row[k] !== undefined && row[k] !== '') return row[k];
+      }
+      return undefined;
+    };
+
+    const matric = String(get('matric_number', 'matric', 'matric no', 'matric_no') || '').trim();
+    const firstName = String(get('first_name', 'firstName', 'first name', 'firstname') || '').trim();
+    const lastName = String(get('last_name', 'lastName', 'last name', 'lastname') || '').trim();
+    const email = String(get('email', 'email address') || '').trim() || undefined;
+    const phone = String(get('phone', 'phone number', 'phone_no', 'phoneNo') || '').trim() || undefined;
+    const collegeId = Number(get('college_id', 'college id', 'collegeId', 'college'));
+    const departmentId = Number(get('department_id', 'department id', 'departmentId', 'department'));
+    const programId = Number(get('program_id', 'program id', 'programId', 'program'));
+    const admissionYear = Number(get('admission_year', 'admission year', 'admissionYear', 'year'));
+    const currentLevel = Number(get('current_level', 'current level', 'currentLevel', 'level')) || 100;
+    const gender = String(get('gender', 'sex') || 'male').toLowerCase();
+    const dob = String(get('date_of_birth', 'date of birth', 'dateOfBirth', 'dob') || '').trim() || undefined;
+
+    if (!matric) throw new Error('matric_number is required');
+    if (!firstName) throw new Error('first_name is required');
+    if (!lastName) throw new Error('last_name is required');
+    if (!collegeId || isNaN(collegeId)) throw new Error('college_id is required and must be a number');
+    if (!departmentId || isNaN(departmentId)) throw new Error('department_id is required and must be a number');
+    if (!programId || isNaN(programId)) throw new Error('program_id is required and must be a number');
+    if (!admissionYear || isNaN(admissionYear)) throw new Error('admission_year is required and must be a number');
+
+    return {
+      matric_number: matric,
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      phone,
+      college_id: collegeId,
+      department_id: departmentId,
+      program_id: programId,
+      admission_year: admissionYear,
+      current_level: currentLevel,
+      gender,
+      date_of_birth: dob,
+    };
+  };
+
   const handleBulkSubmit = async (e) => {
     e.preventDefault();
+    if (!bulkFile) {
+      setError('Please select a CSV or Excel file');
+      return;
+    }
     setBulkLoading(true);
     setError('');
     setBulkResult(null);
     try {
-      const students = JSON.parse(bulkJson);
-      if (!Array.isArray(students)) throw new Error('Must be a JSON array');
+      const rows = await parseBulkFile(bulkFile);
+      if (!Array.isArray(rows) || rows.length === 0) throw new Error('File is empty or has no data rows');
+      const students = rows.map(normalizeStudentRow);
       const res = await api.bulkCreateStudents(students);
       setBulkResult(res);
+      setBulkFile(null);
+      if (bulkInputRef.current) bulkInputRef.current.value = '';
     } catch (err) {
       setError(err.message);
     } finally {
@@ -292,13 +371,11 @@ function RegisterPage() {
     }
   };
 
-  const bulkExample = `[\n  {\n    "first_name": "John",\n    "last_name": "Doe",\n    "email": "john@caleb.edu.ng",\n    "college_id": 7,\n    "department_id": 1,\n    "program_id": 1,\n    "admission_year": 2024,\n    "current_level": 100,\n    "gender": "male"\n  }\n]`;
-
   return (
     <div>
       <div className="page-header">
         <h1>Register Student</h1>
-        <p>Create a new student record with auto-generated matric number</p>
+        <p>Create a new student record using the school's assigned matric number</p>
       </div>
 
       <div className="tabs" style={{ marginBottom: '1.5rem' }}>
@@ -311,6 +388,11 @@ function RegisterPage() {
 
       {mode === 'single' && (
         <form onSubmit={handleSubmit} className="card" style={{ maxWidth: '700px' }}>
+          <div className="form-group">
+            <label className="form-label">Matric Number</label>
+            <input name="matric_number" className="form-input" value={form.matric_number} onChange={handleChange} required placeholder="e.g. 22/11220" />
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div className="form-group">
               <label className="form-label">First Name</label>
@@ -398,22 +480,27 @@ function RegisterPage() {
       {mode === 'bulk' && (
         <form onSubmit={handleBulkSubmit} className="card" style={{ maxWidth: '700px' }}>
           <div className="form-group">
-            <label className="form-label">Bulk Student JSON</label>
-            <textarea
-              className="form-textarea"
-              style={{ minHeight: '200px', fontFamily: 'monospace', fontSize: '0.875rem' }}
-              value={bulkJson}
-              onChange={(e) => setBulkJson(e.target.value)}
-              placeholder={bulkExample}
+            <label className="form-label">Bulk Student Upload</label>
+            <input
+              ref={bulkInputRef}
+              type="file"
+              className="form-input"
+              accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+              onChange={(e) => setBulkFile(e.target.files[0])}
               required
             />
             <p style={{ fontSize: '0.75rem', color: 'var(--cul-gray-500)', marginTop: '0.5rem' }}>
-              Paste a JSON array of student objects. Each object needs: first_name, last_name, college_id, department_id, program_id, admission_year.
+              Upload a CSV or Excel file. Required columns: matric_number, first_name, last_name, college_id, department_id, program_id, admission_year. Optional: email, phone, current_level, gender, date_of_birth.
             </p>
+            {bulkFile && (
+              <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                Selected: <strong>{bulkFile.name}</strong>
+              </p>
+            )}
           </div>
 
-          <button type="submit" className="btn btn-primary" disabled={bulkLoading}>
-            {bulkLoading ? 'Registering...' : `Register ${(() => { try { return JSON.parse(bulkJson).length; } catch { return 0; } })()} Students`}
+          <button type="submit" className="btn btn-primary" disabled={bulkLoading || !bulkFile}>
+            {bulkLoading ? 'Registering...' : 'Register Students'}
           </button>
 
           {bulkResult && (
@@ -837,6 +924,7 @@ export default function StaffDashboard() {
               <Route path="/upload" element={<UploadPage />} />
               <Route path="/missing" element={<MissingDocsPage />} />
               <Route path="/deadlines" element={<DocumentDeadlinesPage />} />
+              <Route path="/register-staff" element={<StaffRegister />} />
               <Route path="/audit" element={<AuditPage />} />
             </Routes>
            </div>

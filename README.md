@@ -79,6 +79,24 @@ npm run tauri dev  # Native desktop window
 | `MAX_FILE_SIZE` | Max upload size (bytes) | 10MB |
 | `CUL_BACKEND_PATH` | Backend path for desktop app | auto-detected |
 
+## Deploy to AWS (Free Tier)
+
+A complete Terraform + Ansible setup is provided in `infrastructure/`:
+
+```bash
+cd infrastructure/terraform
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your values
+terraform init
+terraform apply
+
+cd ../ansible
+# Edit inventory.ini and group_vars/all.yml
+ansible-playbook -i inventory.ini playbook.yml
+```
+
+See [`infrastructure/README.md`](infrastructure/README.md) for detailed instructions.
+
 ## Production Checklist
 
 - [ ] PostgreSQL instead of SQLite

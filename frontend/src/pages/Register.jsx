@@ -4,7 +4,7 @@ import { api } from '../services/api';
 
 export default function Register() {
   const [form, setForm] = useState({
-    first_name: '', last_name: '', email: '', phone: '',
+    matric_number: '', first_name: '', last_name: '', email: '', phone: '',
     college_id: '', department_id: '', program_id: '',
     admission_year: new Date().getFullYear(), current_level: 100,
     gender: 'male', date_of_birth: '',
@@ -54,7 +54,7 @@ export default function Register() {
         `Registration successful! Your matric number is ${data.matric_number} and your default password is ${data.default_password}. Please save these details.`
       );
       setForm({
-        first_name: '', last_name: '', email: '', phone: '',
+        matric_number: '', first_name: '', last_name: '', email: '', phone: '',
         college_id: '', department_id: '', program_id: '',
         admission_year: new Date().getFullYear(), current_level: 100,
         gender: 'male', date_of_birth: '',
@@ -71,7 +71,7 @@ export default function Register() {
       <div className="login-card" style={{ maxWidth: '600px' }}>
         <div className="login-logo">
           <img src="/caleb-logo.jpg" alt="Caleb University Logo" />
-          <h1>CU-Records</h1>
+          <h1>CUL-Records</h1>
           <span>Student Self-Registration</span>
           <span style={{ fontSize: '0.75rem', color: 'var(--cul-gray-400)', marginTop: '0.5rem', fontStyle: 'italic' }}>
             For God and Humanity
@@ -91,6 +91,11 @@ export default function Register() {
         )}
 
         <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label">Matric Number</label>
+            <input name="matric_number" className="form-input" value={form.matric_number} onChange={handleChange} required placeholder="e.g. 22/11220" />
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div className="form-group">
               <label className="form-label">First Name</label>

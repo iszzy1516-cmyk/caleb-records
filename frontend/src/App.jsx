@@ -8,7 +8,15 @@ import StudentDashboard from './pages/StudentDashboard';
 import Settings from './pages/Settings';
 
 function StudentRoute({ children }) {
-  const { isAuthenticated, isStudent } = useAuth();
+  const { isAuthenticated, isStudent, isReady, tokenType, token } = useAuth();
+  console.log('[StudentRoute] render', { isReady, isAuthenticated, isStudent, tokenType, hasToken: !!token });
+  if (!isReady) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <div className="spinner" />
+      </div>
+    );
+  }
   return isAuthenticated && isStudent ? children : <Navigate to="/" replace />;
 }
 

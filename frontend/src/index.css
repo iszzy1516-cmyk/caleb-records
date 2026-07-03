@@ -31,7 +31,7 @@
   --mono: ui-monospace, Consolas, monospace;
 
   font-family: var(--sans);
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.5;
   color: var(--cul-black);
   background-color: var(--cul-gray-50);
@@ -587,6 +587,12 @@ a:hover {
 .portal-page {
   min-height: 100vh;
   background: var(--cul-gray-50);
+  display: flex;
+  flex-direction: column;
+}
+
+.portal-page > .container {
+  flex: 1;
 }
 
 .portal-hero {
@@ -785,4 +791,139 @@ a:hover {
   .stats-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ─── Dark Mode ───────────────────────────────────────────────────────────── */
+.dark {
+  color-scheme: dark;
+}
+
+.dark :root,
+.dark body,
+.dark #root {
+  color: var(--cul-gray-100);
+  background-color: var(--cul-gray-900);
+}
+
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6 {
+  color: var(--cul-gray-100);
+}
+
+.dark p {
+  color: var(--cul-gray-300);
+}
+
+.dark a {
+  color: var(--cul-blue-light);
+}
+
+.dark .card,
+.dark .login-card,
+.dark .modal,
+.dark .stat-card {
+  background: var(--cul-gray-800);
+  color: var(--cul-gray-100);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.dark .card-header,
+.dark .modal-header,
+.dark .modal-footer {
+  border-color: var(--cul-gray-700);
+}
+
+.dark .form-label {
+  color: var(--cul-gray-300);
+}
+
+.dark .form-input,
+.dark .form-select,
+.dark .form-textarea {
+  background-color: var(--cul-gray-800);
+  border-color: var(--cul-gray-600);
+  color: var(--cul-gray-100);
+}
+
+.dark .form-input::placeholder {
+  color: var(--cul-gray-500);
+}
+
+.dark .table th {
+  background-color: var(--cul-gray-800);
+  color: var(--cul-gray-300);
+}
+
+.dark .table td,
+.dark .table th {
+  border-color: var(--cul-gray-700);
+}
+
+.dark .table tr:hover td {
+  background-color: var(--cul-gray-800);
+}
+
+.dark .portal-page,
+.dark .dashboard-main {
+  background: var(--cul-gray-900);
+}
+
+.dark .login-page {
+  background: linear-gradient(135deg, var(--cul-gray-900) 0%, var(--cul-gray-800) 100%);
+}
+
+.dark .sidebar {
+  background: var(--cul-gray-800);
+  border-color: var(--cul-gray-700);
+}
+
+.dark .sidebar-nav li a {
+  color: var(--cul-gray-300);
+}
+
+.dark .sidebar-nav li a:hover,
+.dark .sidebar-nav li a.active {
+  background-color: rgba(0, 132, 61, 0.2);
+}
+
+.dark .doc-checklist-item {
+  background: var(--cul-gray-800);
+  border-color: var(--cul-gray-700);
+}
+
+.dark .tabs {
+  border-color: var(--cul-gray-700);
+}
+
+.dark .tab {
+  color: var(--cul-gray-400);
+}
+
+.dark .page-header h1 {
+  color: var(--cul-gray-100);
+}
+
+.dark .page-header p,
+.dark .stat-card h3,
+.dark .stat-card .value {
+  color: var(--cul-gray-300);
+}
+
+.dark .alert-error {
+  background: rgba(220, 38, 38, 0.15);
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+.dark .alert-success {
+  background: rgba(22, 163, 74, 0.15);
+  border-color: rgba(22, 163, 74, 0.3);
+}
+
+.dark footer {
+  background: var(--cul-gray-800) !important;
+  border-color: var(--cul-gray-700) !important;
 }

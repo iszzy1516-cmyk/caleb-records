@@ -8,7 +8,7 @@ export default function Navbar() {
     <nav className="navbar">
       <div className="container navbar-inner">
         <Link to="/staff" className="navbar-brand">
-          <img src="/caleb-logo.jpg" alt="CUL" />
+          <img src={`${import.meta.env.BASE_URL}caleb-logo.jpg`} alt="CUL" />
           <span>CU-Records</span>
         </Link>
 

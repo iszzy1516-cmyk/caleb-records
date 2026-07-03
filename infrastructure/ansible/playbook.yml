@@ -1,0 +1,8 @@
+---
+- name: Deploy CU-Records to AWS
+  hosts: servers
+  become: true
+  gather_facts: true
+
+  roles:
+    - deploy
