@@ -164,14 +164,6 @@
   register: create_tables_result
   changed_when: "'Tables created' in create_tables_result.stdout"
 
-- name: Seed reference data
-  ansible.builtin.command:
-    cmd: docker compose exec -T backend python -c "from main import seed_data, SessionLocal; db = SessionLocal(); seed_data(db); print('Reference data seeded')"
-    chdir: "{{ app_dir }}"
-  become_user: ubuntu
-  register: seed_result
-  changed_when: "'Reference data seeded' in seed_result.stdout"
-
 - name: Ensure certbot renewal directory exists
   ansible.builtin.file:
     path: /etc/letsencrypt
