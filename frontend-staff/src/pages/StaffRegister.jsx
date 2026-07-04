@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 
@@ -10,12 +10,18 @@ export default function StaffRegister() {
     email: '',
     phone: '',
     department: '',
+    college_id: '',
     password: '',
   });
+  const [colleges, setColleges] = useState([]);
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    api.getColleges().then(setColleges).catch(() => {});
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -47,7 +53,7 @@ export default function StaffRegister() {
       const data = await api.verifyStaffRegistration({ email: form.email, otp });
       setStep('success');
       setSuccess(`Staff account created successfully! Username: ${data.username}, Email: ${data.email}`);
-      setForm({ username: '', full_name: '', email: '', phone: '', department: '', password: '' });
+      setForm({ username: '', full_name: '', email: '', phone: '', department: '', college_id: '', password: '' });
       setOtp('');
     } catch (err) {
       setError(err.message);
@@ -58,7 +64,7 @@ export default function StaffRegister() {
 
   const reset = () => {
     setStep('form');
-    setForm({ username: '', full_name: '', email: '', phone: '', department: '', password: '' });
+    setForm({ username: '', full_name: '', email: '', phone: '', department: '', college_id: '', password: '' });
     setOtp('');
     setError('');
     setSuccess('');
@@ -103,9 +109,18 @@ export default function StaffRegister() {
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Department</label>
-              <input name="department" className="form-input" value={form.department} onChange={handleChange} required placeholder="e.g. Computer Science" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label">Department</label>
+                <input name="department" className="form-input" value={form.department} onChange={handleChange} required placeholder="e.g. Computer Science" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">College</label>
+                <select name="college_id" className="form-select" value={form.college_id} onChange={handleChange} required>
+                  <option value="">Select College</option>
+                  {colleges.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
             </div>
 
             <div className="form-group">

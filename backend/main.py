@@ -24,6 +24,8 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
+import vision
+
 # Create limiter at module level for decorators
 limiter = Limiter(key_func=get_remote_address)
 from sqlalchemy import create_engine, event, func, select, Index
@@ -140,6 +142,10 @@ class Document(Base):
     file_path = Column(String, nullable=False)
     mime_type = Column(String, nullable=True)
     file_size = Column(Integer, nullable=True)
+    verified = Column(Boolean, default=False)
+    verification_confidence = Column(Float, nullable=True)
+    verification_detected_type = Column(String, nullable=True)
+    verification_notes = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 class Course(Base):
@@ -173,10 +179,13 @@ class User(Base):
     email = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     department = Column(String, nullable=True)
+    college_id = Column(Integer, ForeignKey("colleges.id"), nullable=True, index=True)
     hashed_password = Column(String, nullable=False)
     role = Column(String, default="records_officer")
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    college = relationship("College")
 
 class StaffRegistration(Base):
     __tablename__ = "staff_registrations"
@@ -186,12 +195,15 @@ class StaffRegistration(Base):
     email = Column(String, nullable=False, index=True)
     phone = Column(String, nullable=True)
     department = Column(String, nullable=True)
+    college_id = Column(Integer, ForeignKey("colleges.id"), nullable=True)
     hashed_password = Column(String, nullable=False)
     role = Column(String, default="records_officer")
     otp = Column(String, nullable=False)
     expires_at = Column(DateTime, nullable=False)
     verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    college = relationship("College")
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
@@ -250,6 +262,8 @@ class Token(BaseModel):
     username: str
     email: str
     full_name: Optional[str] = None
+    college_id: Optional[int] = None
+    college_name: Optional[str] = None
 
 class CollegeOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -339,6 +353,10 @@ class DocumentOut(BaseModel):
     original_filename: str
     mime_type: Optional[str]
     file_size: Optional[int]
+    verified: bool = False
+    verification_confidence: Optional[float] = None
+    verification_detected_type: Optional[str] = None
+    verification_notes: Optional[str] = None
     created_at: datetime
 
 class GradeCreate(BaseModel):
@@ -381,6 +399,7 @@ class UserCreate(BaseModel):
     email: str
     phone: Optional[str] = None
     department: Optional[str] = None
+    college_id: Optional[int] = None
     password: str
     role: str = "records_officer"
 
@@ -390,6 +409,7 @@ class StaffRegisterRequest(BaseModel):
     email: str
     phone: Optional[str] = None
     department: Optional[str] = None
+    college_id: Optional[int] = None
     password: str = Field(min_length=6)
 
 class StaffRegisterVerify(BaseModel):
@@ -555,6 +575,26 @@ def require_roles(*roles: str):
             raise HTTPException(status_code=403, detail="Insufficient permissions")
         return user
     return checker
+
+# ─── College Scope Helpers ───────────────────────────────────────────────────
+
+GLOBAL_ROLES = {"admin", "registrar"}
+
+def is_global_user(user: User) -> bool:
+    return user.role in GLOBAL_ROLES or user.college_id is None
+
+def ensure_college_access(user: User, college_id: Optional[int]):
+    """Raise 403 if user is college-scoped and college_id does not match."""
+    if is_global_user(user):
+        return
+    if college_id is None or college_id != user.college_id:
+        raise HTTPException(status_code=403, detail="You do not have access to this college")
+
+def apply_college_scope(query, user: User, model=Student):
+    """Filter a query by college_id for non-global staff users."""
+    if is_global_user(user):
+        return query
+    return query.filter(model.college_id == user.college_id)
 
 # ─── Email Utilities ─────────────────────────────────────────────────────────
 
@@ -788,6 +828,8 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db
         "username": user.username,
         "email": user.email,
         "full_name": user.full_name,
+        "college_id": user.college_id,
+        "college_name": user.college.name if user.college else ("All Colleges" if user.role in ("admin", "registrar") else None),
     }
 
 class StudentToken(BaseModel):
@@ -875,6 +917,7 @@ def _create_student_internal(db: Session, data: StudentCreate, actor: str = "sys
 @app.post("/api/students", response_model=StudentOut)
 def create_student(data: StudentCreate, db: Session = Depends(get_db), user: User = Depends(require_roles("records_officer", "admin", "hod"))):
     try:
+        ensure_college_access(user, data.college_id)
         return _create_student_internal(db, data, actor=user.username)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -896,6 +939,7 @@ def bulk_create_students(request: Request, data: BulkStudentCreate, db: Session 
     errors = []
     for student_data in data.students:
         try:
+            ensure_college_access(user, student_data.college_id)
             student = _create_student_internal(db, student_data, actor=user.username)
             created += 1
             matric_numbers.append(student.matric_number)
@@ -908,22 +952,26 @@ def bulk_create_students(request: Request, data: BulkStudentCreate, db: Session 
 @app.get("/api/students/search", response_model=List[StudentOut])
 def search_students(q: str = Query(..., min_length=1), skip: int = 0, limit: int = 50, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     search = f"%{q}%"
-    results = paginate(db.query(Student).filter(
+    query = db.query(Student).filter(
         (Student.matric_number.ilike(search)) |
         (Student.first_name.ilike(search)) |
         (Student.last_name.ilike(search))
-    ), skip, limit).all()
+    )
+    query = apply_college_scope(query, user)
+    results = paginate(query, skip, limit).all()
     return results
 
 @app.get("/api/students/{student_id}", response_model=StudentDetailOut)
 def get_student(student_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    student = db.query(Student).options(
+    query = db.query(Student).options(
         joinedload(Student.college),
         joinedload(Student.department),
         joinedload(Student.program),
         joinedload(Student.documents),
         joinedload(Student.academic_records).joinedload(AcademicRecord.course),
-    ).filter(Student.id == student_id).first()
+    ).filter(Student.id == student_id)
+    query = apply_college_scope(query, user)
+    student = query.first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
@@ -956,7 +1004,8 @@ def get_student(student_id: int, db: Session = Depends(get_db), user: User = Dep
 
 @app.get("/api/students/{student_id}/cgpa")
 def get_cgpa(student_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    student = db.query(Student).filter(Student.id == student_id).first()
+    query = apply_college_scope(db.query(Student).filter(Student.id == student_id), user)
+    student = query.first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     cgpa = calculate_cgpa(db, student.id)
@@ -1022,10 +1071,24 @@ def upload_document(
     return doc
 
 @app.get("/api/documents/{doc_id}/download")
-def download_document(doc_id: int, db: Session = Depends(get_db)):
+def download_document(
+    doc_id: int,
+    db: Session = Depends(get_db),
+    actor: dict = Depends(get_current_user_or_student),
+):
     doc = db.query(Document).filter(Document.id == doc_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+
+    if actor["type"] == "student":
+        if doc.student_id != actor["actor"].id:
+            raise HTTPException(status_code=403, detail="You can only download your own documents")
+    else:
+        user = actor["actor"]
+        student = db.query(Student).filter(Student.id == doc.student_id).first()
+        if student:
+            ensure_college_access(user, student.college_id)
+
     if not Path(doc.file_path).exists():
         raise HTTPException(status_code=404, detail="File not found on disk")
 
@@ -1040,7 +1103,8 @@ def download_document(doc_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/grades", response_model=AcademicRecordOut)
 def create_grade(data: GradeCreate, db: Session = Depends(get_db), user: User = Depends(require_roles("lecturer", "admin", "hod"))):
-    student = db.query(Student).filter(Student.id == data.student_id).first()
+    student_query = apply_college_scope(db.query(Student).filter(Student.id == data.student_id), user)
+    student = student_query.first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     course = db.query(Course).filter(Course.id == data.course_id).first()
@@ -1064,7 +1128,8 @@ def create_grade(data: GradeCreate, db: Session = Depends(get_db), user: User = 
 
 @app.get("/api/reports/missing-documents", response_model=List[MissingDocReport])
 def missing_documents_report(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), user: User = Depends(require_roles("records_officer", "admin", "hod"))):
-    students = paginate(db.query(Student).filter(Student.status == "active"), skip, limit).all()
+    query = apply_college_scope(db.query(Student).filter(Student.status == "active"), user)
+    students = paginate(query, skip, limit).all()
     report = []
 
     required_one_time = ["jamb_result", "waec_result", "jamb_admission_letter", "birth_certificate", "passport_photo", "medical"]
@@ -1235,20 +1300,26 @@ def create_user(data: UserCreate, db: Session = Depends(get_db), user: User = De
     if existing_email:
         raise HTTPException(status_code=400, detail="Email already exists")
 
+    # Only global admins can create other global admins or users without a college
+    if data.role in GLOBAL_ROLES and data.college_id is None:
+        if not is_global_user(user):
+            raise HTTPException(status_code=403, detail="Only registrar/admin can create global users")
+
     new_user = User(
         username=data.username,
         full_name=data.full_name,
         email=data.email.lower().strip(),
         phone=data.phone,
         department=data.department,
+        college_id=data.college_id,
         hashed_password=get_password_hash(data.password),
         role=data.role,
         is_active=True,
     )
     db.add(new_user)
     db.commit()
-    log_action(db, user.username, "CREATE", "users", new_user.id, f"Created user {data.username} ({data.email}) with role {data.role}")
-    return {"message": "User created successfully", "username": data.username, "email": new_user.email, "role": new_user.role}
+    log_action(db, user.username, "CREATE", "users", new_user.id, f"Created user {data.username} ({data.email}) with role {data.role} college_id={data.college_id}")
+    return {"message": "User created successfully", "username": data.username, "email": new_user.email, "role": new_user.role, "college_id": new_user.college_id}
 
 @app.post("/api/staff/register-request", response_model=dict)
 @limiter.limit("10/minute")
@@ -1272,6 +1343,7 @@ def staff_register_request(request: Request, data: StaffRegisterRequest, db: Ses
         email=email,
         phone=data.phone,
         department=data.department,
+        college_id=data.college_id,
         hashed_password=get_password_hash(data.password),
         role="records_officer",
         otp=otp,
@@ -1319,6 +1391,7 @@ def staff_register_verify(data: StaffRegisterVerify, db: Session = Depends(get_d
         email=registration.email,
         phone=registration.phone,
         department=registration.department,
+        college_id=registration.college_id,
         hashed_password=registration.hashed_password,
         role="records_officer",
         is_active=True,
@@ -1411,14 +1484,21 @@ def change_student_password(
 
 @app.get("/api/stats", response_model=StatsOut)
 def get_stats(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    total_students = db.query(Student).count()
-    total_documents = db.query(Document).count()
-    total_colleges = db.query(College).count()
-    total_departments = db.query(Department).count()
-    total_programs = db.query(Program).count()
+    student_query = apply_college_scope(db.query(Student), user)
+    document_query = db.query(Document)
+    if not is_global_user(user):
+        document_query = document_query.join(Student).filter(Student.college_id == user.college_id)
+
+    total_students = student_query.count()
+    total_documents = document_query.count()
+    total_colleges = db.query(College).count() if is_global_user(user) else 1
+    total_departments = db.query(Department).count() if is_global_user(user) else db.query(Department).filter(Department.college_id == user.college_id).count()
+    total_programs = db.query(Program).count() if is_global_user(user) else (
+        db.query(Program).join(Department).filter(Department.college_id == user.college_id).count()
+    )
 
     # Count students with missing docs
-    active_students = db.query(Student).filter(Student.status == "active").all()
+    active_students = apply_college_scope(db.query(Student).filter(Student.status == "active"), user).all()
     total_missing = 0
     required_one_time = ["jamb_result", "waec_result", "jamb_admission_letter", "birth_certificate", "passport_photo", "medical"]
     for s in active_students:
@@ -1435,7 +1515,7 @@ def get_stats(db: Session = Depends(get_db), user: User = Depends(get_current_us
 
     students_by_level = {}
     for lvl in [100, 200, 300, 400, 500]:
-        students_by_level[str(lvl)] = db.query(Student).filter(Student.current_level == lvl).count()
+        students_by_level[str(lvl)] = apply_college_scope(db.query(Student).filter(Student.current_level == lvl), user).count()
 
     return StatsOut(
         total_students=total_students,
@@ -1510,7 +1590,10 @@ def mark_alert_read(alert_id: int, student: Student = Depends(get_current_studen
 
 @app.get("/api/alerts", response_model=List[AlertOut])
 def list_all_alerts(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), user: User = Depends(require_roles("admin", "records_officer", "hod"))):
-    alerts = paginate(db.query(Alert).order_by(Alert.created_at.desc()), skip, limit).all()
+    query = db.query(Alert).order_by(Alert.created_at.desc())
+    if not is_global_user(user):
+        query = query.join(Student).filter(Student.college_id == user.college_id)
+    alerts = paginate(query, skip, limit).all()
     return [AlertOut.model_validate(a) for a in alerts]
 
 # ─── Document Deadlines ──────────────────────────────────────────────────────
@@ -1591,35 +1674,9 @@ def make_payment(data: StudentPaymentCreate, student: Student = Depends(get_curr
     db.refresh(payment)
     return payment
 
-# ─── Updated Document Upload with Deadline Check ─────────────────────────────
+# ─── Document Upload Helpers ─────────────────────────────────────────────────
 
-@app.post("/api/documents", response_model=DocumentOut)
-def upload_document(
-    student_id: int = Form(...),
-    document_type: str = Form(...),
-    level: Optional[int] = Form(None),
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    user: User = Depends(require_roles("records_officer", "admin")),
-):
-    student = db.query(Student).filter(Student.id == student_id).first()
-    if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
-
-    # Check deadline
-    late_fee = check_deadline_and_fee(db, student_id, document_type, level)
-    if late_fee and late_fee > 0:
-        # Check if payment was made
-        paid = db.query(StudentPayment).filter(
-            StudentPayment.student_id == student_id,
-            StudentPayment.payment_type == f"late_fee_{document_type}_{level or 'none'}",
-        ).first()
-        if not paid:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Document upload deadline has passed. A late fee of ₦{late_fee:,.2f} must be paid before uploading."
-            )
-
+def _save_upload_file(file: UploadFile, student: Student, document_type: str, level: Optional[int]) -> Path:
     ext = Path(file.filename).suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail=f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}")
@@ -1639,21 +1696,101 @@ def upload_document(
     with open(file_path, "wb") as f:
         f.write(contents)
 
+    return file_path
+
+
+def _verify_and_create_document(
+    db: Session,
+    student: Student,
+    document_type: str,
+    level: Optional[int],
+    file: UploadFile,
+    file_path: Path,
+    actor_name: str,
+) -> Document:
+    # Vision verification
+    verified = False
+    confidence = None
+    detected_type = None
+    notes = None
+
+    if vision.is_configured():
+        try:
+            result = vision.verify_document(str(file_path), document_type)
+            if not vision.should_accept(result):
+                # Remove rejected file
+                file_path.unlink(missing_ok=True)
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"Document verification failed. Expected '{vision.DOCUMENT_TYPE_LABELS.get(document_type, document_type)}' "
+                        f"but detected '{result.detected_type}' (confidence: {result.confidence:.0%}). {result.notes}"
+                    ),
+                )
+            verified = result.is_correct
+            confidence = result.confidence
+            detected_type = result.detected_type
+            notes = result.notes
+        except HTTPException:
+            raise
+        except Exception as e:
+            # If verification fails due to provider error, reject the upload to be safe
+            file_path.unlink(missing_ok=True)
+            raise HTTPException(status_code=503, detail=f"Document verification service unavailable: {str(e)}")
+
     doc = Document(
-        student_id=student_id,
+        student_id=student.id,
         document_type=document_type,
         level=level,
         original_filename=file.filename,
-        stored_filename=safe_name,
+        stored_filename=file_path.name,
         file_path=str(file_path),
         mime_type=file.content_type,
-        file_size=len(contents),
+        file_size=file_path.stat().st_size,
+        verified=verified,
+        verification_confidence=confidence,
+        verification_detected_type=detected_type,
+        verification_notes=notes,
     )
     db.add(doc)
     db.commit()
     db.refresh(doc)
-    log_action(db, user.username, "UPLOAD", "documents", doc.id, f"Uploaded {document_type} for {student.matric_number}")
+    log_action(db, actor_name, "UPLOAD", "documents", doc.id, f"Uploaded {document_type} for {student.matric_number}")
     return doc
+
+
+# ─── Updated Document Upload with Deadline Check ─────────────────────────────
+
+@app.post("/api/documents", response_model=DocumentOut)
+def upload_document(
+    student_id: int = Form(...),
+    document_type: str = Form(...),
+    level: Optional[int] = Form(None),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles("records_officer", "admin")),
+):
+    student_query = apply_college_scope(db.query(Student).filter(Student.id == student_id), user)
+    student = student_query.first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    # Check deadline
+    late_fee = check_deadline_and_fee(db, student_id, document_type, level)
+    if late_fee and late_fee > 0:
+        paid = db.query(StudentPayment).filter(
+            StudentPayment.student_id == student_id,
+            StudentPayment.payment_type == f"late_fee_{document_type}_{level or 'none'}",
+        ).first()
+        if not paid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Document upload deadline has passed. A late fee of ₦{late_fee:,.2f} must be paid before uploading."
+            )
+
+    file_path = _save_upload_file(file, student, document_type, level)
+    return _verify_and_create_document(db, student, document_type, level, file, file_path, user.username)
+
 
 @app.post("/api/me/documents", response_model=DocumentOut)
 def upload_my_document(
@@ -1676,40 +1813,8 @@ def upload_my_document(
                 detail=f"Document upload deadline has passed. A late fee of ₦{late_fee:,.2f} must be paid before uploading."
             )
 
-    ext = Path(file.filename).suffix.lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail=f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}")
-    if document_type == "clearance_cert" and level not in (100, 200, 300, 400, 500):
-        raise HTTPException(status_code=400, detail="Level is required for clearance certificates")
-
-    contents = file.file.read()
-    if len(contents) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail=f"File exceeds {MAX_FILE_SIZE / 1024 / 1024:.0f}MB limit")
-
-    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-    level_str = f"_{level}" if level else ""
-    safe_name = f"{student.matric_number}_{document_type}{level_str}_{timestamp}{ext}"
-    safe_name = safe_name.replace("/", "_")
-    file_path = UPLOAD_DIR / safe_name
-
-    with open(file_path, "wb") as f:
-        f.write(contents)
-
-    doc = Document(
-        student_id=student.id,
-        document_type=document_type,
-        level=level,
-        original_filename=file.filename,
-        stored_filename=safe_name,
-        file_path=str(file_path),
-        mime_type=file.content_type,
-        file_size=len(contents),
-    )
-    db.add(doc)
-    db.commit()
-    db.refresh(doc)
-    log_action(db, student.matric_number, "UPLOAD", "documents", doc.id, f"Student uploaded {document_type}")
-    return doc
+    file_path = _save_upload_file(file, student, document_type, level)
+    return _verify_and_create_document(db, student, document_type, level, file, file_path, student.matric_number)
 
 # ─── Health Check ────────────────────────────────────────────────────────────
 

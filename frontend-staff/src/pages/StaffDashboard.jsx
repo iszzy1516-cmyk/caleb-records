@@ -48,6 +48,7 @@ function Sidebar() {
 function DashboardHome() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { collegeName } = useAuth();
 
   useEffect(() => {
     setLoading(true);
@@ -60,7 +61,7 @@ function DashboardHome() {
   return (
     <div>
       <div className="page-header">
-        <h1>Dashboard</h1>
+        <h1>Dashboard {collegeName && <span style={{ fontSize: '1rem', fontWeight: 400, color: 'var(--cul-gray-500)' }}>— {collegeName}</span>}</h1>
         <p>Overview of student records system</p>
       </div>
 
@@ -202,9 +203,41 @@ function SearchPage() {
           </div>
 
           {details.cgpa != null && (
-            <div style={{ background: 'var(--cul-green-light)', padding: '1rem', borderRadius: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ background: 'var(--cul-green-light)', padding: '1rem', borderRadius: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
               <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--cul-green)' }}>{details.cgpa.toFixed(2)}</span>
               <span style={{ fontSize: '0.875rem', color: 'var(--cul-gray-600)' }}>CGPA</span>
+            </div>
+          )}
+
+          {details.documents?.length > 0 && (
+            <div>
+              <h3 style={{ marginBottom: '0.75rem' }}>Uploaded Documents</h3>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Filename</th>
+                    <th>Status</th>
+                    <th>Detected</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {details.documents.map((doc) => (
+                    <tr key={doc.id}>
+                      <td>{docTypes.find((d) => d.key === doc.document_type)?.label || doc.document_type}</td>
+                      <td>{doc.original_filename}</td>
+                      <td>
+                        {doc.verified ? (
+                          <span className="badge badge-green">Verified</span>
+                        ) : (
+                          <span className="badge badge-warning">Unverified</span>
+                        )}
+                      </td>
+                      <td>{doc.verification_detected_type || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -214,10 +247,13 @@ function SearchPage() {
 }
 
 function RegisterPage() {
+  const { collegeId, collegeName, isAdmin, isRegistrar } = useAuth();
+  const isGlobal = isAdmin || isRegistrar;
   const [mode, setMode] = useState('single');
   const [form, setForm] = useState({
     matric_number: '', first_name: '', last_name: '', email: '', phone: '',
-    college_id: '', department_id: '', program_id: '',
+    college_id: isGlobal ? '' : (collegeId || ''),
+    department_id: '', program_id: '',
     admission_year: new Date().getFullYear(), current_level: 100,
     gender: 'male', date_of_birth: '',
   });
@@ -293,7 +329,7 @@ function RegisterPage() {
           const worksheet = workbook.Sheets[sheetName];
           const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
           resolve(json);
-        } catch (err) {
+        } catch {
           reject(new Error('Could not parse file. Make sure it is a valid CSV or Excel sheet.'));
         }
       };
@@ -418,10 +454,14 @@ function RegisterPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div className="form-group">
               <label className="form-label">College</label>
-              <select name="college_id" className="form-select" value={form.college_id} onChange={handleChange} required>
-                <option value="">Select College</option>
-                {colleges.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              {!isGlobal && collegeName ? (
+                <input className="form-input" value={collegeName} disabled />
+              ) : (
+                <select name="college_id" className="form-select" value={form.college_id} onChange={handleChange} required>
+                  <option value="">Select College</option>
+                  {colleges.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              )}
             </div>
             <div className="form-group">
               <label className="form-label">Department</label>

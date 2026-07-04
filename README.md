@@ -794,3 +794,94 @@ Before going live with real student data, ensure the following:
 - [`desktop/README.md`](desktop/README.md) — Desktop app build instructions.
 - [`frontend/README.md`](frontend/README.md) — Student portal template notes.
 - [`frontend-staff/README.md`](frontend-staff/README.md) — Staff portal template notes.
+
+---
+
+## Document Verification with Vision AI
+
+CU-Records can automatically verify that an uploaded document matches the expected document type (e.g., a `birth_certificate` upload must actually look like a birth certificate).
+
+### Supported Providers
+
+| Provider | Model | Notes |
+|----------|-------|-------|
+| **OpenAI** | `gpt-4o` | Recommended; most accurate |
+| **Google Gemini** | `gemini-1.5-flash` | Good free tier availability |
+| **Ollama** | `llava` | Self-hosted; no cloud required |
+
+### How It Works
+
+1. A student or staff member uploads a file.
+2. If the file is a PDF, the first page is converted to an image.
+3. The image is sent to the configured vision model with a prompt like:
+   > "Expected document type: Birth Certificate. Examine the image and return JSON: is_correct, confidence, detected_type, notes."
+4. The backend parses the response.
+5. If `is_correct` is false or `confidence < VISION_MIN_CONFIDENCE`, the file is rejected and deleted.
+6. If accepted, the document record is saved with verification metadata.
+
+### Configuration
+
+```bash
+VISION_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+VISION_VERIFY_UPLOADS=true
+VISION_MIN_CONFIDENCE=0.7
+```
+
+Set `VISION_VERIFY_UPLOADS=false` to disable verification (e.g., during initial setup or if no API key is available).
+
+### Verification Status
+
+Staff can see verification status in the student search details page:
+
+- **Verified** — green badge; document matched the expected type.
+- **Unverified** — yellow badge; verification was skipped or unavailable.
+
+Rejected uploads return a clear error message explaining what was detected.
+
+---
+
+## College-Based Access Control
+
+Staff access is scoped by college. The registrar and admin roles have cross-college (global) access.
+
+### Role Scope
+
+| Role | Scope |
+|------|-------|
+| `admin` | All colleges |
+| `registrar` | All colleges |
+| `records_officer` | Assigned college only |
+| `hod` | Assigned college only |
+| `lecturer` | Assigned college only |
+
+### How It Works
+
+- Every `User` record has an optional `college_id`.
+- `college_id = NULL` means global access (admin/registrar).
+- College-scoped staff can only:
+  - Search and view students in their college.
+  - Upload documents for students in their college.
+  - Record grades and payments for students in their college.
+  - View missing-documents reports and alerts limited to their college.
+  - See dashboard stats scoped to their college.
+
+### Staff Registration
+
+When a new staff member registers via OTP:
+
+1. They select their college from a dropdown.
+2. Their account is created with role `records_officer` and the selected `college_id`.
+3. They can only access data for that college.
+
+### Admin Setup
+
+After deployment, the default admin account has global access. The admin can:
+
+- Create additional admin/registrar accounts with global access.
+- Assign or change college assignments for existing staff.
+
+### Migration Notes
+
+Existing staff users created before this feature will have `college_id = NULL`, giving them global access until an admin assigns them to a college.
+

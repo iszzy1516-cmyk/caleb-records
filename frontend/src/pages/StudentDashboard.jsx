@@ -223,6 +223,15 @@ export default function StudentDashboard() {
                         <div style={{ fontSize: '0.75rem', color: 'var(--cul-gray-500)' }}>
                           {doc ? `Uploaded ${new Date(doc.created_at).toLocaleDateString()}` : 'Not uploaded'}
                         </div>
+                        {doc && (
+                          <div style={{ fontSize: '0.7rem', marginTop: '0.25rem' }}>
+                            {doc.verified ? (
+                              <span style={{ color: 'var(--cul-green)' }}>Verified</span>
+                            ) : (
+                              <span style={{ color: 'var(--cul-warning)' }}>Pending verification</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                       {doc && (
                         <a
@@ -256,6 +265,15 @@ export default function StudentDashboard() {
                         <div style={{ fontSize: '0.75rem', color: 'var(--cul-gray-500)' }}>
                           {doc ? `Uploaded ${new Date(doc.created_at).toLocaleDateString()}` : 'Not uploaded'}
                         </div>
+                        {doc && (
+                          <div style={{ fontSize: '0.7rem', marginTop: '0.25rem' }}>
+                            {doc.verified ? (
+                              <span style={{ color: 'var(--cul-green)' }}>Verified</span>
+                            ) : (
+                              <span style={{ color: 'var(--cul-warning)' }}>Pending verification</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                       {doc && (
                         <a

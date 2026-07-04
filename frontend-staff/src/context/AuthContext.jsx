@@ -36,11 +36,14 @@ export function AuthProvider({ children }) {
   const isAuthenticated = !!token;
   const isStaff = tokenType === 'staff';
   const isStudent = tokenType === 'student';
-  const isAdmin = isStaff && user?.role === 'admin';
+  const isAdmin = isStaff && (user?.role === 'admin' || user?.role === 'registrar');
+  const isRegistrar = isStaff && user?.role === 'registrar';
   const isRecordsOfficer = isStaff && (user?.role === 'records_officer' || isAdmin);
   const isLecturer = isStaff && (user?.role === 'lecturer' || isAdmin);
   const isHod = isStaff && (user?.role === 'hod' || isAdmin);
   const isBursar = isStaff && (user?.role === 'bursar' || isAdmin);
+  const collegeId = isStaff ? user?.college_id : null;
+  const collegeName = isStaff ? user?.college_name : null;
 
   const value = {
     user,
@@ -52,10 +55,13 @@ export function AuthProvider({ children }) {
     isStaff,
     isStudent,
     isAdmin,
+    isRegistrar,
     isRecordsOfficer,
     isLecturer,
     isHod,
     isBursar,
+    collegeId,
+    collegeName,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
