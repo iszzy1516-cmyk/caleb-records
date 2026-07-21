@@ -41,6 +41,18 @@ export default function UserManagement() {
   const [bulkResult, setBulkResult] = useState(null);
   const bulkInputRef = useRef(null);
 
+  // List state
+  const [users, setUsers] = useState([]);
+  const [listLoading, setListLoading] = useState(false);
+  const [listError, setListError] = useState('');
+  const [listFilters, setListFilters] = useState({
+    q: '',
+    role: '',
+    college_id: isGlobal ? '' : (collegeId || ''),
+    department_id: isGlobal || isDean ? '' : (departmentId || ''),
+  });
+  const [listDepartments, setListDepartments] = useState([]);
+
   useEffect(() => {
     if (isGlobal) {
       api.getColleges().then(setColleges).catch(() => {});
@@ -61,6 +73,49 @@ export default function UserManagement() {
       api.getDepartments(collegeId).then(setDepartments).catch(() => {});
     }
   }, [isDean, collegeId, isGlobal]);
+
+  // Reset department filter when college filter changes
+  useEffect(() => {
+    if (isGlobal) {
+      setListFilters((f) => ({ ...f, department_id: '' }));
+    }
+  }, [listFilters.college_id, isGlobal]);
+
+  // Load departments for list filter based on college
+  useEffect(() => {
+    const deptCollegeId = isGlobal ? listFilters.college_id : collegeId;
+    if (deptCollegeId) {
+      api.getDepartments(deptCollegeId).then(setListDepartments).catch(() => {});
+    } else {
+      setListDepartments([]);
+    }
+  }, [listFilters.college_id, collegeId, isGlobal]);
+
+  // Load users when list tab is active or filters change
+  useEffect(() => {
+    if (mode !== 'list') return;
+    loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, listFilters.q, listFilters.role, listFilters.college_id, listFilters.department_id]);
+
+  const loadUsers = async () => {
+    setListLoading(true);
+    setListError('');
+    try {
+      const params = {};
+      if (listFilters.q.trim()) params.q = listFilters.q.trim();
+      if (listFilters.role) params.role = listFilters.role;
+      if (listFilters.college_id) params.college_id = listFilters.college_id;
+      if (listFilters.department_id) params.department_id = listFilters.department_id;
+      const data = await api.listUsers(params);
+      setUsers(data);
+    } catch (err) {
+      setListError(err.message);
+      setUsers([]);
+    } finally {
+      setListLoading(false);
+    }
+  };
 
   const availableRoles = isGlobal
     ? ROLES
@@ -199,6 +254,12 @@ export default function UserManagement() {
     XLSX.writeFile(wb, 'staff_bulk_upload_template.xlsx');
   };
 
+  const updateListFilter = (name, value) => {
+    setListFilters((f) => ({ ...f, [name]: value }));
+  };
+
+  const canShowList = isGlobal || isDean;
+
   return (
     <div>
       <div className="page-header">
@@ -206,14 +267,15 @@ export default function UserManagement() {
         <p>{isGlobal ? 'Create staff accounts one at a time or upload a spreadsheet' : 'Create staff accounts for your college'}</p>
       </div>
 
-      {(isGlobal || isDean) && (
-        <div className="tabs" style={{ marginBottom: '1.5rem' }}>
-          <button className={`tab ${mode === 'single' ? 'active' : ''}`} onClick={() => setMode('single')}>Single User</button>
-          {isGlobal && (
-            <button className={`tab ${mode === 'bulk' ? 'active' : ''}`} onClick={() => setMode('bulk')}>Bulk Upload</button>
-          )}
-        </div>
-      )}
+      <div className="tabs" style={{ marginBottom: '1.5rem' }}>
+        <button className={`tab ${mode === 'single' ? 'active' : ''}`} onClick={() => setMode('single')}>Single User</button>
+        {isGlobal && (
+          <button className={`tab ${mode === 'bulk' ? 'active' : ''}`} onClick={() => setMode('bulk')}>Bulk Upload</button>
+        )}
+        {canShowList && (
+          <button className={`tab ${mode === 'list' ? 'active' : ''}`} onClick={() => setMode('list')}>Staff List</button>
+        )}
+      </div>
 
       {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
       {success && <div className="alert alert-success" style={{ marginBottom: '1rem' }}>{success}</div>}
@@ -346,6 +408,111 @@ export default function UserManagement() {
             </div>
           )}
         </form>
+      )}
+
+      {mode === 'list' && (
+        <div className="card">
+          <div className="card-header">
+            <h3>Staff Accounts</h3>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label">Search</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Username, name or email"
+                value={listFilters.q}
+                onChange={(e) => updateListFilter('q', e.target.value)}
+              />
+            </div>
+
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label">Role</label>
+              <select className="form-select" value={listFilters.role} onChange={(e) => updateListFilter('role', e.target.value)}>
+                <option value="">All Roles</option>
+                {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+              </select>
+            </div>
+
+            {isGlobal && (
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">College</label>
+                <select className="form-select" value={listFilters.college_id} onChange={(e) => updateListFilter('college_id', e.target.value)}>
+                  <option value="">All Colleges</option>
+                  {colleges.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            )}
+
+            {(isGlobal || isDean) && (
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Department</label>
+                <select
+                  className="form-select"
+                  value={listFilters.department_id}
+                  onChange={(e) => updateListFilter('department_id', e.target.value)}
+                  disabled={!listFilters.college_id && isGlobal}
+                >
+                  <option value="">All Departments</option>
+                  {listDepartments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {listError && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{listError}</div>}
+
+          {listLoading ? (
+            <div className="text-center" style={{ padding: '2rem' }}>
+              <div className="spinner" style={{ margin: '0 auto' }} />
+            </div>
+          ) : (
+            <div className="table-container">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>College</th>
+                    <th>Department</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="text-center" style={{ padding: '2rem', color: 'var(--cul-gray-500)' }}>
+                        No staff accounts found.
+                      </td>
+                    </tr>
+                  )}
+                  {users.map((u) => (
+                    <tr key={u.id}>
+                      <td style={{ fontWeight: 600 }}>{u.username}</td>
+                      <td>{u.full_name || '-'}</td>
+                      <td>{u.email || '-'}</td>
+                      <td style={{ textTransform: 'capitalize' }}>{u.role.replace(/_/g, ' ')}</td>
+                      <td>{u.college?.name || '-'}</td>
+                      <td>{u.department?.name || '-'}</td>
+                      <td>
+                        {u.is_active ? (
+                          <span className="badge badge-green">Active</span>
+                        ) : (
+                          <span className="badge badge-red">Inactive</span>
+                        )}
+                        {u.force_password_change && <span className="badge badge-warning" style={{ marginLeft: '0.25rem' }}>Must change password</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

@@ -185,6 +185,23 @@ class UserCreate(BaseModel):
     role: str = "records_officer"
 
 
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    id: int
+    username: str
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    role: str
+    is_active: bool
+    force_password_change: bool
+    college_id: Optional[int] = None
+    department_id: Optional[int] = None
+    college: Optional[CollegeOut] = None
+    department: Optional[DepartmentOut] = Field(default=None, validation_alias='department_rel')
+    created_at: Optional[datetime] = None
+
+
 class BulkUserItem(BaseModel):
     username: str
     full_name: Optional[str] = None

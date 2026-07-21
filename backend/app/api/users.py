@@ -2,7 +2,9 @@
 
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -14,13 +16,15 @@ from app.core.security import (
     get_current_user,
     get_password_hash,
     is_college_user,
+    is_department_user,
     is_global_user,
     require_roles,
     verify_password,
 )
-from app.crud.records import log_action
+from app.crud.records import log_action, paginate
 from app.models import Department, StaffRegistration, User
 from app.schemas import BulkUserCreate, PasswordChange, StaffRegisterRequest, StaffRegisterVerify, UserCreate
+from app.schemas.records import UserOut
 from app.services.email import generate_otp, send_email
 
 router = APIRouter(tags=["Users"])
@@ -92,6 +96,50 @@ def create_user(
         "department_id": new_user.department_id,
         "force_password_change": new_user.force_password_change,
     }
+
+
+@router.get("/api/users", response_model=List[UserOut])
+def list_users(
+    q: Optional[str] = Query(None),
+    role: Optional[str] = Query(None),
+    college_id: Optional[int] = Query(None),
+    department_id: Optional[int] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("admin", "registrar", "dean", "hod", "records_officer", "lecturer")),
+):
+    query = db.query(User)
+
+    # Scope results based on current user's role
+    if is_global_user(current_user):
+        pass  # can see all
+    elif is_college_user(current_user):
+        query = query.filter(User.college_id == current_user.college_id)
+    else:
+        query = query.filter(User.department_id == current_user.department_id)
+
+    # Apply requested filters (respecting scope)
+    if role:
+        query = query.filter(User.role == role)
+    if college_id is not None:
+        if not is_global_user(current_user) and college_id != current_user.college_id:
+            raise HTTPException(status_code=403, detail="Cannot filter by that college")
+        query = query.filter(User.college_id == college_id)
+    if department_id is not None:
+        if is_department_user(current_user) and department_id != current_user.department_id:
+            raise HTTPException(status_code=403, detail="Cannot filter by that department")
+        query = query.filter(User.department_id == department_id)
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            (User.username.ilike(like))
+            | (User.full_name.ilike(like))
+            | (User.email.ilike(like))
+        )
+
+    return paginate(query.order_by(User.created_at.desc()), skip, limit).all()
 
 
 @router.post("/api/users/change-password", response_model=dict)

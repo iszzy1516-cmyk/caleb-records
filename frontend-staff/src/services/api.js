@@ -168,6 +168,10 @@ export const api = {
   getAuditLogs: (limit = 50) => request(`/api/audit-logs?limit=${limit}`),
 
   // User management
+  listUsers: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/api/users${qs ? `?${qs}` : ''}`);
+  },
   createUser: (data) => request('/api/users', { method: 'POST', body: JSON.stringify(data) }),
   bulkCreateUsers: (users) => request('/api/users/bulk', { method: 'POST', body: JSON.stringify({ users }) }),
   changeStaffPassword: (data, token = null) => {
