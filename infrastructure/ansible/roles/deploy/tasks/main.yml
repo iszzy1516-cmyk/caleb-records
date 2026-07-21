@@ -161,7 +161,7 @@
 
 - name: Create database tables
   ansible.builtin.command:
-    cmd: docker compose -f docker-compose.yml -f docker-compose.override.yml exec -T backend python -c "from main import Base, engine; Base.metadata.create_all(bind=engine); print('Tables created')"
+    cmd: docker compose -f docker-compose.yml -f docker-compose.override.yml exec -T backend python -c "from app.core.database import Base, engine; Base.metadata.create_all(bind=engine); print('Tables created')"
     chdir: "{{ app_dir }}"
   become_user: ubuntu
   register: create_tables_result
