@@ -2,6 +2,17 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
+function currentAcademicSession() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1; // 1-12
+  // Nigerian universities: Sept/Oct -> July/August
+  if (month >= 9) {
+    return `${year}/${year + 1}`;
+  }
+  return `${year - 1}/${year}`;
+}
+
 export default function StudentDashboard() {
   const { user, logout } = useAuth();
   const [student, setStudent] = useState(null);
@@ -17,6 +28,7 @@ export default function StudentDashboard() {
   const [uploadForm, setUploadForm] = useState({
     document_type: '',
     level: '',
+    session: currentAcademicSession(),
     file: null,
   });
 
@@ -70,14 +82,15 @@ export default function StudentDashboard() {
     const formData = new FormData();
     formData.append('document_type', uploadForm.document_type);
     formData.append('file', uploadForm.file);
-    if (uploadForm.document_type === 'clearance_cert' && uploadForm.level) {
-      formData.append('level', uploadForm.level);
+    if (uploadForm.document_type === 'clearance_cert') {
+      if (uploadForm.level) formData.append('level', uploadForm.level);
+      if (uploadForm.session) formData.append('session', uploadForm.session);
     }
 
     try {
       await api.uploadMyDocument(formData);
       setSuccess('Document uploaded successfully!');
-      setUploadForm({ document_type: '', level: '', file: null });
+      setUploadForm({ document_type: '', level: '', session: currentAcademicSession(), file: null });
       await loadData();
     } catch (err) {
       setError(err.message);
@@ -370,23 +383,36 @@ export default function StudentDashboard() {
               </div>
 
               {uploadForm.document_type === 'clearance_cert' && (
-                <div className="form-group">
-                  <label className="form-label">Level</label>
-                  <select
-                    className="form-select"
-                    value={uploadForm.level}
-                    onChange={(e) => setUploadForm({ ...uploadForm, level: e.target.value })}
-                    required
-                  >
-                    <option value="">Select level</option>
-                    {Array.from(
-                      { length: student.program?.duration_years || 4 },
-                      (_, i) => (i + 1) * 100
-                    ).map((l) => (
-                      <option key={l} value={l}>{l} Level</option>
-                    ))}
-                  </select>
-                </div>
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Level</label>
+                    <select
+                      className="form-select"
+                      value={uploadForm.level}
+                      onChange={(e) => setUploadForm({ ...uploadForm, level: e.target.value })}
+                      required
+                    >
+                      <option value="">Select level</option>
+                      {Array.from(
+                        { length: student.program?.duration_years || 4 },
+                        (_, i) => (i + 1) * 100
+                      ).map((l) => (
+                        <option key={l} value={l}>{l} Level</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Academic Session</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={uploadForm.session}
+                      onChange={(e) => setUploadForm({ ...uploadForm, session: e.target.value })}
+                      required
+                      placeholder="e.g. 2025/2026"
+                    />
+                  </div>
+                </>
               )}
 
               <div className="form-group">
