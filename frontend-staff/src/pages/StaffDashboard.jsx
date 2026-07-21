@@ -577,12 +577,23 @@ function RegisterPage() {
   );
 }
 
+function currentAcademicSession() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1; // 1-12
+  // Nigerian universities: Sept/Oct -> July/August
+  if (month >= 9) {
+    return `${year}/${year + 1}`;
+  }
+  return `${year - 1}/${year}`;
+}
+
 function UploadPage() {
   const [studentId, setStudentId] = useState('');
   const [student, setStudent] = useState(null);
   const [docType, setDocType] = useState('');
   const [level, setLevel] = useState('');
-  const [session, setSession] = useState('');
+  const [session, setSession] = useState(currentAcademicSession());
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
@@ -635,7 +646,7 @@ function UploadPage() {
       setStudentId('');
       setDocType('');
       setLevel('');
-      setSession('');
+      setSession(currentAcademicSession());
       setFile(null);
     } catch (err) {
       setError(err.message);
