@@ -18,22 +18,46 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+def _is_mobile_webview_origin(origin: str) -> bool:
+    """Allow common mobile/Tauri/Capacitor local origins and file/null origins."""
+    if not origin or origin == "null":
+        return True
+    low = origin.lower()
+    return (
+        low.startswith("http://localhost")
+        or low.startswith("https://localhost")
+        or low.startswith("http://127.0.0.1")
+        or low.startswith("https://127.0.0.1")
+        or "tauri" in low
+        or low.startswith("capacitor://")
+        or low.startswith("ionic://")
+        or low.startswith("file://")
+    )
+
+
 class OptionsCorsMiddleware(BaseHTTPMiddleware):
-    """Handle CORS preflight robustly for mobile webviews."""
+    """Handle CORS for web browsers and mobile/Tauri webviews."""
 
     async def dispatch(self, request: Request, call_next):
+        origin = request.headers.get("origin", "")
+        allowed_origin = origin if (
+            origin in settings.cors_origins_list or _is_mobile_webview_origin(origin)
+        ) else (
+            settings.cors_origins_list[0] if settings.cors_origins_list else "*"
+        )
+
         if request.method == "OPTIONS":
-            origin = request.headers.get("origin", "")
             response = Response(status_code=200)
-            allowed_origin = (
-                origin
-                if origin in settings.cors_origins_list
-                else (settings.cors_origins_list[0] if settings.cors_origins_list else "*")
-            )
             response.headers["Access-Control-Allow-Origin"] = allowed_origin
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
             response.headers["Access-Control-Allow-Headers"] = "*"
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Max-Age"] = "86400"
+            response.headers["Vary"] = "Origin"
             return response
-        return await call_next(request)
+
+        response = await call_next(request)
+        response.headers["Access-Control-Allow-Origin"] = allowed_origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Vary"] = "Origin"
+        return response
