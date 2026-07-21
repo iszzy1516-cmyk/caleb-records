@@ -34,7 +34,10 @@ def _get_s3_client():
     region = settings.AWS_REGION or "us-east-1"
     kwargs = {
         "region_name": region,
-        "config": Config(s3={"addressing_style": "path" if settings.S3_FORCE_PATH_STYLE else "auto"}),
+        "config": Config(
+            signature_version="s3v4",
+            s3={"addressing_style": "path" if settings.S3_FORCE_PATH_STYLE else "auto"},
+        ),
     }
     if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
         kwargs["aws_access_key_id"] = settings.AWS_ACCESS_KEY_ID
