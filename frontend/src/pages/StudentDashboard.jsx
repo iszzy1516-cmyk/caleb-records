@@ -247,15 +247,13 @@ export default function StudentDashboard() {
                         )}
                       </div>
                       {doc && (
-                        <a
-                          href={api.downloadDocument(doc.id)}
-                          target="_blank"
-                          rel="noreferrer"
+                        <button
+                          onClick={() => api.downloadDocument(doc.id, doc.original_filename).catch((err) => alert(err.message))}
                           className="btn btn-sm btn-outline"
                           style={{ flexShrink: 0 }}
                         >
                           Download
-                        </a>
+                        </button>
                       )}
                     </div>
                   );
@@ -292,15 +290,13 @@ export default function StudentDashboard() {
                         )}
                       </div>
                       {doc && (
-                        <a
-                          href={api.downloadDocument(doc.id)}
-                          target="_blank"
-                          rel="noreferrer"
+                        <button
+                          onClick={() => api.downloadDocument(doc.id, doc.original_filename).catch((err) => alert(err.message))}
                           className="btn btn-sm btn-outline"
                           style={{ flexShrink: 0 }}
                         >
                           Download
-                        </a>
+                        </button>
                       )}
                     </div>
                   );
