@@ -90,8 +90,8 @@ def upload_my_document(
                 detail=f"Document upload deadline has passed. A late fee of ₦{late_fee:,.2f} must be paid before uploading.",
             )
 
-    file_path = save_upload_file(file, student, document_type, level, session)
-    return verify_and_create_document(db, student, document_type, level, session, file, file_path, student.matric_number)
+    saved = save_upload_file(file, student, document_type, level, session)
+    return verify_and_create_document(db, student, document_type, level, session, file, saved, student.matric_number)
 
 
 @router.get("/grades")

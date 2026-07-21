@@ -125,6 +125,9 @@ class DocumentOut(BaseModel):
     original_filename: str
     mime_type: Optional[str]
     file_size: Optional[int]
+    storage_provider: str = "local"
+    storage_key: Optional[str] = None
+    public_url: Optional[str] = None
     verified: bool = False
     verification_confidence: Optional[float] = None
     verification_detected_type: Optional[str] = None

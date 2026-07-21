@@ -133,6 +133,7 @@ resource "aws_instance" "app" {
   key_name               = aws_key_pair.deployer.key_name
   vpc_security_group_ids = [aws_security_group.app.id]
   subnet_id              = aws_subnet.public.id
+  iam_instance_profile   = aws_iam_instance_profile.app.name
 
   root_block_device {
     volume_size = 20
@@ -155,7 +156,7 @@ resource "aws_eip" "app" {
   depends_on = [aws_internet_gateway.main]
 }
 
-# ─── S3 Bucket for Backups & Uploads ────────────────────────────────────────
+# ─── S3 Bucket for Backups ──────────────────────────────────────────────────
 
 resource "random_id" "bucket_suffix" {
   byte_length = 4
@@ -187,24 +188,161 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "backups" {
   }
 }
 
+# ─── S3 Bucket for Document Uploads ──────────────────────────────────────────
+
+resource "aws_s3_bucket" "uploads" {
+  bucket = "${var.project_name}-uploads-${random_id.bucket_suffix.hex}"
+
+  tags = {
+    Name = "${var.project_name}-uploads"
+  }
+}
+
+resource "aws_s3_bucket_ownership_controls" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+
+  block_public_acls       = true
+  block_public_policy     = false
+  ignore_public_acls      = true
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_policy" "uploads_public_read" {
+  bucket = aws_s3_bucket.uploads.id
+
+  depends_on = [aws_s3_bucket_public_access_block.uploads]
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowPublicRead"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.uploads.arn}/documents/*"
+      }
+    ]
+  })
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# ─── IAM Role for EC2 to Access Upload Bucket ────────────────────────────────
+
+resource "aws_iam_role" "app" {
+  name = "${var.project_name}-app-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name = "${var.project_name}-app-role"
+  }
+}
+
+resource "aws_iam_role_policy" "uploads" {
+  name = "${var.project_name}-uploads-policy"
+  role = aws_iam_role.app.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "UploadBucketAccess"
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject",
+        ]
+        Resource = "${aws_s3_bucket.uploads.arn}/documents/*"
+      },
+      {
+        Sid      = "UploadBucketList"
+        Effect   = "Allow"
+        Action   = "s3:ListBucket"
+        Resource = aws_s3_bucket.uploads.arn
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "backups" {
+  name = "${var.project_name}-backups-policy"
+  role = aws_iam_role.app.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "BackupBucketAccess"
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+        ]
+        Resource = "${aws_s3_bucket.backups.arn}/*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_instance_profile" "app" {
+  name = "${var.project_name}-app-profile"
+  role = aws_iam_role.app.name
+
+  tags = {
+    Name = "${var.project_name}-app-profile"
+  }
+}
+
 # ─── Generate Ansible Inventory ─────────────────────────────────────────────
 
 resource "local_file" "ansible_inventory" {
   content = templatefile("${path.module}/templates/ansible-inventory.tpl", {
-    public_ip    = aws_eip.app.public_ip
-    key_name     = var.key_name
-    ssh_key_path = pathexpand("~/.ssh/${var.key_name}.pem")
-    s3_bucket    = aws_s3_bucket.backups.bucket
-    rds_endpoint = var.create_rds ? aws_db_instance.postgres[0].endpoint : ""
+    public_ip       = aws_eip.app.public_ip
+    key_name        = var.key_name
+    ssh_key_path    = pathexpand("~/.ssh/${var.key_name}.pem")
+    s3_bucket       = aws_s3_bucket.backups.bucket
+    s3_upload_bucket = aws_s3_bucket.uploads.bucket
+    rds_endpoint    = var.create_rds ? aws_db_instance.postgres[0].endpoint : ""
   })
   filename = "${path.module}/../ansible/inventory.ini"
 }
 
 resource "local_file" "ansible_group_vars_example" {
   content = templatefile("${path.module}/templates/ansible-group-vars.tpl", {
-    public_ip    = aws_eip.app.public_ip
-    s3_bucket    = aws_s3_bucket.backups.bucket
-    rds_endpoint = var.create_rds ? aws_db_instance.postgres[0].endpoint : ""
+    public_ip        = aws_eip.app.public_ip
+    s3_bucket        = aws_s3_bucket.backups.bucket
+    s3_upload_bucket = aws_s3_bucket.uploads.bucket
+    rds_endpoint     = var.create_rds ? aws_db_instance.postgres[0].endpoint : ""
   })
   filename = "${path.module}/../ansible/group_vars/all.yml.example"
 }

@@ -19,8 +19,13 @@ output "ssh_command" {
 }
 
 output "s3_backup_bucket" {
-  description = "S3 bucket for backups and uploads"
+  description = "S3 bucket for backups"
   value       = aws_s3_bucket.backups.bucket
+}
+
+output "s3_upload_bucket" {
+  description = "S3 bucket for document uploads"
+  value       = aws_s3_bucket.uploads.bucket
 }
 
 output "rds_endpoint" {

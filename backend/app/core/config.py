@@ -41,6 +41,14 @@ class Settings(BaseSettings):
     SMTP_FROM: str = "noreply@calebuniversity.edu.ng"
     FRONTEND_URL: str = "http://localhost:5173"
 
+    # S3-compatible object storage for document uploads
+    S3_UPLOAD_BUCKET: Optional[str] = None
+    AWS_REGION: str = "us-east-1"
+    AWS_ACCESS_KEY_ID: Optional[str] = None
+    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+    S3_PUBLIC_URL: Optional[str] = None
+    S3_FORCE_PATH_STYLE: bool = False
+
     # Vision (also read by root vision.py; mirrored here for completeness)
     VISION_PROVIDER: str = "openai"
     OPENAI_API_KEY: Optional[str] = None

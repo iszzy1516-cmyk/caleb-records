@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -51,8 +51,8 @@ def upload_document(
                 detail=f"Document upload deadline has passed. A late fee of ₦{late_fee:,.2f} must be paid before uploading.",
             )
 
-    file_path = save_upload_file(file, student, document_type, level, session)
-    return verify_and_create_document(db, student, document_type, level, session, file, file_path, user.username)
+    saved = save_upload_file(file, student, document_type, level, session)
+    return verify_and_create_document(db, student, document_type, level, session, file, saved, user.username)
 
 
 @router.get("/{doc_id}/download")
@@ -74,6 +74,9 @@ def download_document(
         if student:
             ensure_college_access(user, student.college_id)
             ensure_department_access(user, student.department_id)
+
+    if doc.storage_provider == "s3" and doc.public_url:
+        return RedirectResponse(url=doc.public_url)
 
     if not Path(doc.file_path).exists():
         raise HTTPException(status_code=404, detail="File not found on disk")
