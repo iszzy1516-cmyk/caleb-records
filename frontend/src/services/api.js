@@ -163,10 +163,16 @@ export const api = {
     const url = `${API_BASE}/api/documents/${doc?.id}/download`;
     const res = await apiFetch(url, {
       headers: { Authorization: `Bearer ${getToken()}` },
+      credentials: 'include',
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Download failed' }));
       throw new Error(err.detail || 'Download failed');
+    }
+    // If the server redirects to a public URL (S3), follow it.
+    if (res.redirected && res.url) {
+      window.open(res.url, '_blank', 'noopener,noreferrer');
+      return;
     }
     const blob = await res.blob();
     const blobUrl = window.URL.createObjectURL(blob);

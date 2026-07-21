@@ -1000,15 +1000,27 @@ a:hover {
 }
 
 .dark .alert-error {
-  background: rgba(127, 29, 29, 0.85);
+  background: #7f1d1d;
   color: #fee2e2;
-  border-color: rgba(248, 113, 113, 0.6);
+  border-color: #f87171;
+}
+
+.dark .alert-error span,
+.dark .alert-error p,
+.dark .alert-error strong {
+  color: #fee2e2;
 }
 
 .dark .alert-success {
-  background: rgba(22, 163, 74, 0.25);
+  background: #14532d;
   color: #bbf7d0;
-  border-color: rgba(22, 163, 74, 0.5);
+  border-color: #4ade80;
+}
+
+.dark .alert-success span,
+.dark .alert-success p,
+.dark .alert-success strong {
+  color: #bbf7d0;
 }
 
 .dark footer {

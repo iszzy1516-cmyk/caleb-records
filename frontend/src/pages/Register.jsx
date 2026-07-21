@@ -17,12 +17,16 @@ export default function Register() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.getColleges().then(setColleges).catch(() => {});
+    api.getColleges()
+      .then(setColleges)
+      .catch((err) => setError(`Failed to load colleges: ${err.message}`));
   }, []);
 
   useEffect(() => {
     if (form.college_id) {
-      api.getDepartments(form.college_id).then(setDepartments).catch(() => {});
+      api.getDepartments(form.college_id)
+        .then(setDepartments)
+        .catch((err) => setError(`Failed to load departments: ${err.message}`));
     } else {
       setDepartments([]);
     }
@@ -31,7 +35,9 @@ export default function Register() {
 
   useEffect(() => {
     if (form.department_id) {
-      api.getPrograms(form.department_id).then(setPrograms).catch(() => {});
+      api.getPrograms(form.department_id)
+        .then(setPrograms)
+        .catch((err) => setError(`Failed to load programs: ${err.message}`));
     } else {
       setPrograms([]);
     }

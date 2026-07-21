@@ -9,7 +9,14 @@
     "core:default",
     {
       "identifier": "http:default",
-      "allow": [{ "url": "https://culrecords.duckdns.org" }, { "url": "https://*.duckdns.org" }]
+      "allow": [
+        { "url": "https://culrecords.duckdns.org" },
+        { "url": "https://*.duckdns.org" },
+        { "url": "http://98.85.146.214" },
+        { "url": "https://98.85.146.214" },
+        { "url": "https://*.s3.amazonaws.com" },
+        { "url": "https://*.s3.*.amazonaws.com" }
+      ]
     }
   ]
 }
