@@ -16,7 +16,7 @@ from app.core.security import (
     require_roles,
 )
 from app.crud.records import calculate_cgpa, create_student_internal, log_action, paginate
-from app.models import AcademicRecord, Document, Student, User
+from app.models import AcademicRecord, Department, Document, Student, User
 from app.schemas import BulkStudentCreate, BulkStudentResult, StudentCreate, StudentDetailOut, StudentOut
 from app.schemas.records import AcademicRecordOut, CollegeOut, DepartmentOut, DocumentOut, ProgramOut
 
@@ -91,6 +91,8 @@ def search_students(
             (Student.matric_number.ilike(search))
             | (Student.first_name.ilike(search))
             | (Student.last_name.ilike(search))
+            | (Student.email.ilike(search))
+            | (Student.department.has(Department.name.ilike(search)))
         )
 
     if college_id is not None:
