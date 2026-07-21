@@ -15,8 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application
-COPY main.py .
+# Copy entire application
+COPY . .
 
 # Create uploads directory (empty on fresh deploy)
 RUN mkdir -p uploads

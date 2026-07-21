@@ -11,9 +11,11 @@ export default function StaffRegister() {
     phone: '',
     department: '',
     college_id: '',
+    department_id: '',
     password: '',
   });
   const [colleges, setColleges] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
@@ -22,6 +24,15 @@ export default function StaffRegister() {
   useEffect(() => {
     api.getColleges().then(setColleges).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (form.college_id) {
+      api.getDepartments(form.college_id).then(setDepartments).catch(() => {});
+    } else {
+      setDepartments([]);
+    }
+    setForm((f) => ({ ...f, department_id: '' }));
+  }, [form.college_id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -53,7 +64,7 @@ export default function StaffRegister() {
       const data = await api.verifyStaffRegistration({ email: form.email, otp });
       setStep('success');
       setSuccess(`Staff account created successfully! Username: ${data.username}, Email: ${data.email}`);
-      setForm({ username: '', full_name: '', email: '', phone: '', department: '', college_id: '', password: '' });
+      setForm({ username: '', full_name: '', email: '', phone: '', department: '', college_id: '', department_id: '', password: '' });
       setOtp('');
     } catch (err) {
       setError(err.message);
@@ -64,7 +75,7 @@ export default function StaffRegister() {
 
   const reset = () => {
     setStep('form');
-    setForm({ username: '', full_name: '', email: '', phone: '', department: '', college_id: '', password: '' });
+    setForm({ username: '', full_name: '', email: '', phone: '', department: '', college_id: '', department_id: '', password: '' });
     setOtp('');
     setError('');
     setSuccess('');
@@ -111,16 +122,23 @@ export default function StaffRegister() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div className="form-group">
-                <label className="form-label">Department</label>
-                <input name="department" className="form-input" value={form.department} onChange={handleChange} required placeholder="e.g. Computer Science" />
-              </div>
-              <div className="form-group">
                 <label className="form-label">College</label>
                 <select name="college_id" className="form-select" value={form.college_id} onChange={handleChange} required>
                   <option value="">Select College</option>
                   {colleges.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
+              <div className="form-group">
+                <label className="form-label">Department</label>
+                <select name="department_id" className="form-select" value={form.department_id} onChange={handleChange} required disabled={!form.college_id}>
+                  <option value="">Select Department</option>
+                  {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Department Name (optional display name)</label>
+              <input name="department" className="form-input" value={form.department} onChange={handleChange} placeholder="e.g. Computer Science" />
             </div>
 
             <div className="form-group">

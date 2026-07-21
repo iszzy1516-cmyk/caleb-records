@@ -113,7 +113,7 @@ export default function StudentLogin() {
 
         <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--cul-gray-200)', textAlign: 'center' }}>
           <p style={{ fontSize: '0.75rem', color: 'var(--cul-gray-400)', margin: 0 }}>
-            Default password is usually <strong>Caleb{String(new Date().getFullYear()).slice(-2)}</strong> unless changed by staff.
+            Default password is <strong>CalebYY</strong> where YY is the last two digits of your admission year (e.g. <strong>Caleb22</strong> for 2022/2023).
           </p>
         </div>
       </div>

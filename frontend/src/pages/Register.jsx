@@ -43,6 +43,9 @@ export default function Register() {
     setForm((f) => ({ ...f, [name]: value }));
   };
 
+  const selectedProgram = programs.find((p) => String(p.id) === String(form.program_id));
+  const maxLevel = (selectedProgram?.duration_years || 4) * 100;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -153,11 +156,9 @@ export default function Register() {
             <div className="form-group">
               <label className="form-label">Current Level</label>
               <select name="current_level" className="form-select" value={form.current_level} onChange={handleChange}>
-                <option value={100}>100 Level</option>
-                <option value={200}>200 Level</option>
-                <option value={300}>300 Level</option>
-                <option value={400}>400 Level</option>
-                <option value={500}>500 Level</option>
+                {Array.from({ length: maxLevel / 100 }, (_, i) => (i + 1) * 100).map((lvl) => (
+                  <option key={lvl} value={lvl}>{lvl} Level</option>
+                ))}
               </select>
             </div>
             <div className="form-group">

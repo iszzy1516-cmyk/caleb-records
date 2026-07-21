@@ -135,11 +135,11 @@ export default function StudentDashboard() {
         {alerts.filter((a) => !a.is_read).length > 0 && (
           <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid var(--cul-danger)' }}>
             <div className="card-header">
-              <h3>🔔 Notifications ({alerts.filter((a) => !a.is_read).length} unread)</h3>
+              <h3>Notifications ({alerts.filter((a) => !a.is_read).length} unread)</h3>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {alerts.filter((a) => !a.is_read).slice(0, 3).map((alert) => (
-                <div key={alert.id} style={{ padding: '0.75rem', background: 'var(--cul-danger-light)', borderRadius: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                <div key={alert.id} className="alert alert-error" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: 0 }}>
                   <span style={{ fontSize: '0.875rem' }}>{alert.message}</span>
                   <button
                     className="btn btn-sm btn-outline"
@@ -255,7 +255,10 @@ export default function StudentDashboard() {
                 <h3>Clearance Certificates</h3>
               </div>
               <div className="doc-checklist">
-                {[100, 200, 300, 400, 500].map((lvl) => {
+                {Array.from(
+                  { length: student.program?.duration_years || 4 },
+                  (_, i) => (i + 1) * 100
+                ).map((lvl) => {
                   const doc = getDoc('clearance_cert', lvl);
                   return (
                     <div key={lvl} className={`doc-checklist-item ${doc ? 'present' : 'missing'}`}>
@@ -376,7 +379,10 @@ export default function StudentDashboard() {
                     required
                   >
                     <option value="">Select level</option>
-                    {[100, 200, 300, 400, 500].map((l) => (
+                    {Array.from(
+                      { length: student.program?.duration_years || 4 },
+                      (_, i) => (i + 1) * 100
+                    ).map((l) => (
                       <option key={l} value={l}>{l} Level</option>
                     ))}
                   </select>

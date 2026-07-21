@@ -171,7 +171,10 @@ export default function StudentPortal() {
 
               <h4 style={{ marginBottom: '0.75rem', fontSize: '0.9375rem', color: 'var(--cul-gray-700)' }}>Clearance Certificates</h4>
               <div className="doc-checklist">
-                {[100, 200, 300, 400, 500].map((lvl) => {
+                {Array.from(
+                  { length: student.program?.duration_years || 4 },
+                  (_, i) => (i + 1) * 100
+                ).map((lvl) => {
                   const doc = getDoc('clearance_cert', lvl);
                   return (
                     <div key={lvl} className={`doc-checklist-item ${doc ? 'present' : 'missing'}`}>

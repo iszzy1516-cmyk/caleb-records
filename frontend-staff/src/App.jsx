@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
-import StaffRegister from './pages/StaffRegister';
 import StaffDashboard from './pages/StaffDashboard';
 
 function StaffRoute({ children }) {
@@ -13,7 +12,6 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
-      <Route path="/register" element={<StaffRegister />} />
       <Route
         path="/staff/*"
         element={

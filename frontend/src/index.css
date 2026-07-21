@@ -914,13 +914,15 @@ a:hover {
 }
 
 .dark .alert-error {
-  background: rgba(220, 38, 38, 0.15);
-  border-color: rgba(220, 38, 38, 0.3);
+  background: rgba(127, 29, 29, 0.85);
+  color: #fee2e2;
+  border-color: rgba(248, 113, 113, 0.6);
 }
 
 .dark .alert-success {
-  background: rgba(22, 163, 74, 0.15);
-  border-color: rgba(22, 163, 74, 0.3);
+  background: rgba(22, 163, 74, 0.25);
+  color: #bbf7d0;
+  border-color: rgba(22, 163, 74, 0.5);
 }
 
 .dark footer {

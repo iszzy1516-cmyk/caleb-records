@@ -33,6 +33,19 @@ services:
       SMTP_USER: ${SMTP_USER}
       SMTP_PASS: ${SMTP_PASS}
       SMTP_FROM: ${SMTP_FROM:-noreply@calebuniversity.edu.ng}
+      VISION_PROVIDER: ${VISION_PROVIDER:-openai}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
+      DASHSCOPE_BASE_URL: ${DASHSCOPE_BASE_URL:-https://dashscope-intl.aliyuncs.com/compatible-mode/v1}
+      DASHSCOPE_MODEL: ${DASHSCOPE_MODEL:-qwen-vl-max}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://localhost:11434}
+      OVH_QWEN_BASE_URL: ${OVH_QWEN_BASE_URL:-https://oai.endpoints.kepler.ai.cloud.ovh.net/v1}
+      OVH_QWEN_API_KEY: ${OVH_QWEN_API_KEY:-none}
+      VISION_VERIFY_UPLOADS: ${VISION_VERIFY_UPLOADS:-true}
+      VISION_REJECT_ON_FAILURE: ${VISION_REJECT_ON_FAILURE:-true}
+      VISION_MIN_CONFIDENCE: ${VISION_MIN_CONFIDENCE:-0.7}
     volumes:
       - uploads_data:/app/uploads
     depends_on:

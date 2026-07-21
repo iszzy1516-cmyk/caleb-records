@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
-  const { user, logout, collegeName } = useAuth();
+  const { user, logout, collegeName, departmentName } = useAuth();
 
   return (
     <nav className="navbar">
@@ -16,9 +16,9 @@ export default function Navbar() {
           <li>
             <span style={{ opacity: 0.9, fontSize: '0.875rem' }}>
               {user?.full_name || user?.username}
-              {collegeName && (
+              {(collegeName || departmentName) && (
                 <span style={{ opacity: 0.75, marginLeft: '0.5rem' }}>
-                  ({collegeName})
+                  ({[departmentName, collegeName].filter(Boolean).join(' · ')})
                 </span>
               )}
             </span>

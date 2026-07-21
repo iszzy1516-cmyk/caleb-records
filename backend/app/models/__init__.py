@@ -1,0 +1,33 @@
+from app.models.records import (
+    AcademicRecord,
+    Alert,
+    AuditLog,
+    College,
+    Course,
+    Department,
+    Document,
+    DocumentDeadline,
+    PasswordReset,
+    Program,
+    StaffRegistration,
+    Student,
+    StudentPayment,
+    User,
+)
+
+__all__ = [
+    "AcademicRecord",
+    "Alert",
+    "AuditLog",
+    "College",
+    "Course",
+    "Department",
+    "Document",
+    "DocumentDeadline",
+    "PasswordReset",
+    "Program",
+    "StaffRegistration",
+    "Student",
+    "StudentPayment",
+    "User",
+]

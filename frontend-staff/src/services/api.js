@@ -19,15 +19,12 @@ function getToken() {
 
 async function request(path, options = {}) {
   const url = `${API_BASE}${path}`;
+  const token = getToken();
   const headers = {
     'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
-
-  const token = getToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
 
   const res = await fetch(url, {
     ...options,
@@ -97,7 +94,14 @@ export const api = {
   },
 
   // Students
-  searchStudents: (q) => request(`/api/students/search?q=${encodeURIComponent(q)}`),
+  searchStudents: (params) => {
+    const qs = new URLSearchParams();
+    if (params.q) qs.set('q', params.q);
+    if (params.college_id) qs.set('college_id', params.college_id);
+    if (params.department_id) qs.set('department_id', params.department_id);
+    if (params.session) qs.set('session', params.session);
+    return request(`/api/students/search?${qs.toString()}`);
+  },
   getStudent: (id) => request(`/api/students/${id}`),
   createStudent: (data) => request('/api/students', { method: 'POST', body: JSON.stringify(data) }),
   bulkCreateStudents: (students) => request('/api/students/bulk', { method: 'POST', body: JSON.stringify({ students }) }),
@@ -165,6 +169,12 @@ export const api = {
 
   // User management
   createUser: (data) => request('/api/users', { method: 'POST', body: JSON.stringify(data) }),
+  bulkCreateUsers: (users) => request('/api/users/bulk', { method: 'POST', body: JSON.stringify({ users }) }),
+  changeStaffPassword: (data, token = null) => {
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return request('/api/users/change-password', { method: 'POST', headers, body: JSON.stringify(data) });
+  },
 
   // Staff Registration with OTP
   requestStaffRegistration: (data) => request('/api/staff/register-request', { method: 'POST', body: JSON.stringify(data) }),

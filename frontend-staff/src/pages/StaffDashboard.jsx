@@ -5,10 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Navbar from '../components/Navbar';
 import StudentSearch from '../components/StudentSearch';
-import StaffRegister from './StaffRegister';
+import UserManagement from './UserManagement';
 
 function Sidebar() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isDean } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -21,8 +21,10 @@ function Sidebar() {
     { path: '/staff/deadlines', label: 'Document Deadlines' },
   ];
 
+  if (isAdmin || isDean) {
+    items.push({ path: '/staff/users', label: 'User Management' });
+  }
   if (isAdmin) {
-    items.push({ path: '/staff/register-staff', label: 'Register Staff' });
     items.push({ path: '/staff/audit', label: 'Audit Logs' });
   }
 
@@ -152,7 +154,7 @@ function SearchPage() {
     <div>
       <div className="page-header">
         <h1>Search Students</h1>
-        <p>Find students by matric number or name</p>
+        <p>Find students by matric number, name, college, department or academic session</p>
       </div>
 
       <StudentSearch onSelect={handleSelect} />
@@ -188,7 +190,10 @@ function SearchPage() {
                   </div>
                 </div>
               ))}
-              {[100, 200, 300, 400, 500].map((lvl) => (
+              {Array.from(
+                { length: details.program?.duration_years || 4 },
+                (_, i) => (i + 1) * 100
+              ).map((lvl) => (
                 <div key={lvl} className={`doc-checklist-item ${hasDoc('clearance_cert', lvl) ? 'present' : 'missing'}`}>
                   <div className="doc-icon">{hasDoc('clearance_cert', lvl) ? 'Yes' : 'No'}</div>
                   <div>
@@ -574,12 +579,27 @@ function RegisterPage() {
 
 function UploadPage() {
   const [studentId, setStudentId] = useState('');
+  const [student, setStudent] = useState(null);
   const [docType, setDocType] = useState('');
   const [level, setLevel] = useState('');
+  const [session, setSession] = useState('');
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!studentId) {
+      setStudent(null);
+      return;
+    }
+    const id = Number(studentId);
+    if (!id || Number.isNaN(id)) {
+      setStudent(null);
+      return;
+    }
+    api.getStudent(id).then(setStudent).catch(() => setStudent(null));
+  }, [studentId]);
 
   const docTypes = [
     { value: 'clearance_cert', label: 'Clearance Certificate' },
@@ -607,6 +627,7 @@ function UploadPage() {
     formData.append('document_type', docType);
     formData.append('file', file);
     if (showLevel && level) formData.append('level', level);
+    if (showLevel && session) formData.append('session', session);
 
     try {
       await api.uploadDocument(formData);
@@ -614,6 +635,7 @@ function UploadPage() {
       setStudentId('');
       setDocType('');
       setLevel('');
+      setSession('');
       setFile(null);
     } catch (err) {
       setError(err.message);
@@ -636,6 +658,11 @@ function UploadPage() {
         <div className="form-group">
           <label className="form-label">Student ID</label>
           <input type="number" className="form-input" value={studentId} onChange={(e) => setStudentId(e.target.value)} required placeholder="Enter student ID number" />
+          {student && (
+            <p style={{ fontSize: '0.875rem', marginTop: '0.5rem', color: 'var(--cul-gray-600)' }}>
+              {student.first_name} {student.last_name} &middot; {student.matric_number} &middot; {student.program?.name} ({student.program?.duration_years || 4} years)
+            </p>
+          )}
         </div>
 
         <div className="form-group">
@@ -647,13 +674,29 @@ function UploadPage() {
         </div>
 
         {showLevel && (
-          <div className="form-group">
-            <label className="form-label">Level</label>
-            <select className="form-select" value={level} onChange={(e) => setLevel(e.target.value)} required={showLevel}>
-              <option value="">Select level</option>
-              {[100, 200, 300, 400, 500].map((l) => <option key={l} value={l}>{l} Level</option>)}
-            </select>
-          </div>
+          <>
+            <div className="form-group">
+              <label className="form-label">Level</label>
+              <select className="form-select" value={level} onChange={(e) => setLevel(e.target.value)} required={showLevel}>
+                <option value="">Select level</option>
+                {Array.from(
+                  { length: student?.program?.duration_years || 4 },
+                  (_, i) => (i + 1) * 100
+                ).map((l) => <option key={l} value={l}>{l} Level</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Academic Session</label>
+              <input
+                type="text"
+                className="form-input"
+                value={session}
+                onChange={(e) => setSession(e.target.value)}
+                required={showLevel}
+                placeholder="e.g. 2023/2024"
+              />
+            </div>
+          </>
         )}
 
         <div className="form-group">
@@ -964,7 +1007,7 @@ export default function StaffDashboard() {
               <Route path="/upload" element={<UploadPage />} />
               <Route path="/missing" element={<MissingDocsPage />} />
               <Route path="/deadlines" element={<DocumentDeadlinesPage />} />
-              <Route path="/register-staff" element={<StaffRegister />} />
+              <Route path="/users" element={<UserManagement />} />
               <Route path="/audit" element={<AuditPage />} />
             </Routes>
            </div>
