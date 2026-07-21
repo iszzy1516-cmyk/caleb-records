@@ -154,12 +154,6 @@ export const api = {
   },
 
   downloadDocument: async (doc) => {
-    // If the document is stored on S3 and has a public URL, open it directly.
-    // This avoids CORS/auth issues in mobile webviews.
-    if (doc?.public_url) {
-      window.open(doc.public_url, '_blank', 'noopener,noreferrer');
-      return;
-    }
     const url = `${API_BASE}/api/documents/${doc?.id}/download`;
     const res = await apiFetch(url, {
       headers: { Authorization: `Bearer ${getToken()}` },
@@ -169,11 +163,13 @@ export const api = {
       const err = await res.json().catch(() => ({ detail: 'Download failed' }));
       throw new Error(err.detail || 'Download failed');
     }
-    // If the server redirects to a public URL (S3), follow it.
-    if (res.redirected && res.url) {
-      window.open(res.url, '_blank', 'noopener,noreferrer');
+    const data = await res.json().catch(() => null);
+    // S3-backed documents return a presigned download URL.
+    if (data?.download_url) {
+      window.open(data.download_url, '_blank', 'noopener,noreferrer');
       return;
     }
+    // Local files come back as binary data.
     const blob = await res.blob();
     const blobUrl = window.URL.createObjectURL(blob);
     const a = document.createElement('a');

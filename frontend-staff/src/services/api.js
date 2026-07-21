@@ -149,18 +149,22 @@ export const api = {
   },
 
   downloadDocument: async (doc) => {
-    if (doc?.public_url) {
-      window.open(doc.public_url, '_blank', 'noopener,noreferrer');
-      return;
-    }
     const url = `${API_BASE}/api/documents/${doc?.id}/download`;
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${getToken()}` },
+      credentials: 'include',
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Download failed' }));
       throw new Error(err.detail || 'Download failed');
     }
+    const data = await res.json().catch(() => null);
+    // S3-backed documents return a presigned download URL.
+    if (data?.download_url) {
+      window.open(data.download_url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    // Local files come back as binary data.
     const blob = await res.blob();
     const blobUrl = window.URL.createObjectURL(blob);
     const a = document.createElement('a');

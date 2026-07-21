@@ -80,7 +80,7 @@ def download_document(
         download_url = storage.generate_presigned_download_url(
             doc.storage_key, filename=doc.original_filename
         )
-        return RedirectResponse(url=download_url)
+        return {"download_url": download_url}
 
     if not Path(doc.file_path).exists():
         raise HTTPException(status_code=404, detail="File not found on disk")
