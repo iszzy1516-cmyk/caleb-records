@@ -248,7 +248,7 @@ export default function StudentDashboard() {
                       </div>
                       {doc && (
                         <button
-                          onClick={() => api.downloadDocument(doc.id, doc.original_filename).catch((err) => alert(err.message))}
+                          onClick={() => api.downloadDocument(doc).catch((err) => alert(err.message))}
                           className="btn btn-sm btn-outline"
                           style={{ flexShrink: 0 }}
                         >
@@ -291,7 +291,7 @@ export default function StudentDashboard() {
                       </div>
                       {doc && (
                         <button
-                          onClick={() => api.downloadDocument(doc.id, doc.original_filename).catch((err) => alert(err.message))}
+                          onClick={() => api.downloadDocument(doc).catch((err) => alert(err.message))}
                           className="btn btn-sm btn-outline"
                           style={{ flexShrink: 0 }}
                         >

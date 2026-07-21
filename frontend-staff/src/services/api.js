@@ -148,8 +148,12 @@ export const api = {
     });
   },
 
-  downloadDocument: async (id, filename = 'document') => {
-    const url = `${API_BASE}/api/documents/${id}/download`;
+  downloadDocument: async (doc) => {
+    if (doc?.public_url) {
+      window.open(doc.public_url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    const url = `${API_BASE}/api/documents/${doc?.id}/download`;
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${getToken()}` },
     });
@@ -161,7 +165,7 @@ export const api = {
     const blobUrl = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = blobUrl;
-    a.download = filename;
+    a.download = doc?.original_filename || 'document';
     document.body.appendChild(a);
     a.click();
     a.remove();
