@@ -75,8 +75,11 @@ def download_document(
             ensure_college_access(user, student.college_id)
             ensure_department_access(user, student.department_id)
 
-    if doc.storage_provider == "s3" and doc.public_url:
-        return RedirectResponse(url=doc.public_url)
+    if doc.storage_provider == "s3" and doc.storage_key:
+        download_url = storage.generate_presigned_download_url(
+            doc.storage_key, filename=doc.original_filename
+        )
+        return RedirectResponse(url=download_url)
 
     if not Path(doc.file_path).exists():
         raise HTTPException(status_code=404, detail="File not found on disk")

@@ -715,7 +715,7 @@ function UploadPage() {
           <input
             type="file"
             className="form-input"
-            accept=".pdf,.jpg,.jpeg,.png"
+            accept="application/pdf,image/jpeg,image/png"
             onChange={(e) => setFile(e.target.files[0])}
             required
           />

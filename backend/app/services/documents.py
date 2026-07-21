@@ -131,7 +131,10 @@ def verify_and_create_document(
         try:
             s3_key = f"documents/{student.college_id}/{student.department_id}/{student.id}/{saved.safe_name}"
             public_url = storage.upload_file_to_s3(
-                file_path, s3_key, content_type=file.content_type or "application/octet-stream"
+                file_path,
+                s3_key,
+                content_type=file.content_type or "application/octet-stream",
+                original_filename=file.filename,
             )
             storage_provider = "s3"
             storage_key = s3_key

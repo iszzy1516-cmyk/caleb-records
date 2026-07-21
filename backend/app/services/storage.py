@@ -53,23 +53,34 @@ def _build_public_url(key: str) -> str:
     return f"https://{bucket}.s3.{region}.amazonaws.com/{key}"
 
 
-def upload_file_to_s3(file_path: Path, key: str, content_type: Optional[str] = None) -> str:
-    """Upload a local file to S3 and return its public URL."""
+def upload_file_to_s3(
+    file_path: Path, key: str, content_type: Optional[str] = None, original_filename: Optional[str] = None
+) -> str:
+    """Upload a local file to S3 and return its public URL.
+
+    Sets Content-Disposition to attachment so public links trigger a download
+    rather than opening in the browser.
+    """
     client = _get_s3_client()
-    extra_args = {}
+    extra_args = {"ContentDisposition": f'attachment; filename="{original_filename or Path(key).name}"'}
     if content_type:
         extra_args["ContentType"] = content_type
     client.upload_file(str(file_path), settings.S3_UPLOAD_BUCKET, key, ExtraArgs=extra_args)
     return _build_public_url(key)
 
 
-def generate_presigned_download_url(key: str, expiration: int = 3600) -> str:
-    """Generate a temporary presigned URL for an S3 object."""
+def generate_presigned_download_url(
+    key: str, filename: Optional[str] = None, expiration: int = 3600
+) -> str:
+    """Generate a temporary presigned URL that forces the browser to download the file."""
     client = _get_s3_client()
+    params = {"Bucket": settings.S3_UPLOAD_BUCKET, "Key": key}
+    disposition = f'attachment; filename="{filename or Path(key).name}"'
+    params["ResponseContentDisposition"] = disposition
     try:
         return client.generate_presigned_url(
             "get_object",
-            Params={"Bucket": settings.S3_UPLOAD_BUCKET, "Key": key},
+            Params=params,
             ExpiresIn=expiration,
         )
     except ClientError as exc:
