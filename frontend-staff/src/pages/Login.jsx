@@ -67,7 +67,8 @@ export default function Login() {
         },
         loginData.token
       );
-      login(loginData.token, loginData.user, 'staff');
+      const updatedUser = { ...loginData.user, force_password_change: false };
+      login(loginData.token, updatedUser, 'staff');
       navigate('/staff');
     } catch (err) {
       setError(err.message || 'Failed to change password');

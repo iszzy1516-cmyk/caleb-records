@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
   const isStudent = tokenType === 'student';
   const isAdmin = isStaff && (user?.role === 'admin' || user?.role === 'registrar');
   const isRegistrar = isStaff && user?.role === 'registrar';
-  const isDean = isStaff && (user?.role === 'dean' || isAdmin);
+  const isDean = isStaff && user?.role === 'dean';
   const isRecordsOfficer = isStaff && (user?.role === 'records_officer' || isAdmin);
   const isLecturer = isStaff && (user?.role === 'lecturer' || isAdmin);
   const isHod = isStaff && (user?.role === 'hod' || isAdmin);
