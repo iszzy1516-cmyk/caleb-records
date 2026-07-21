@@ -17,6 +17,10 @@
         { "url": "https://*.s3.amazonaws.com" },
         { "url": "https://*.s3.*.amazonaws.com" }
       ]
+    },
+    {
+      "identifier": "shell:allow-open",
+      "allow": [{ "url": "https://*.s3.amazonaws.com" }, { "url": "https://*.s3.*.amazonaws.com" }]
     }
   ]
 }

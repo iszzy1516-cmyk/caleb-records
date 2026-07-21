@@ -1,4 +1,5 @@
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { open } from '@tauri-apps/plugin-shell';
 
 function getApiBase() {
   // Use explicit API URL if set (build-time env var)
@@ -166,7 +167,12 @@ export const api = {
     const data = await res.json().catch(() => null);
     // S3-backed documents return a presigned download URL.
     if (data?.download_url) {
-      window.open(data.download_url, '_blank', 'noopener,noreferrer');
+      if (isTauri()) {
+        // Open in the system browser so Content-Disposition: attachment triggers a real download.
+        await open(data.download_url);
+      } else {
+        window.open(data.download_url, '_blank', 'noopener,noreferrer');
+      }
       return;
     }
     // Local files come back as binary data.

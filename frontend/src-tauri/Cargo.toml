@@ -20,6 +20,7 @@ log = "0.4"
 tauri = { version = "2.11.2", features = [] }
 tauri-plugin-http = "2"
 tauri-plugin-log = "2"
+tauri-plugin-shell = "2"
 
 [profile.release]
 opt-level = 3
