@@ -1,3 +1,5 @@
+import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+
 function getApiBase() {
   // Use explicit API URL if set (build-time env var)
   if (import.meta.env.VITE_API_URL) {
@@ -12,6 +14,14 @@ function getApiBase() {
 }
 
 const API_BASE = getApiBase();
+
+function isTauri() {
+  return typeof window !== 'undefined' && !!window.__TAURI__;
+}
+
+function apiFetch(url, options) {
+  return (isTauri() ? tauriFetch : fetch)(url, options);
+}
 
 function getToken() {
   return localStorage.getItem('cul_token');
@@ -29,7 +39,7 @@ async function request(path, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, {
+  const res = await apiFetch(url, {
     ...options,
     headers,
   });
@@ -57,7 +67,7 @@ export const api = {
     const form = new URLSearchParams();
     form.append('username', username);
     form.append('password', password);
-    return fetch(`${API_BASE}/token`, {
+    return apiFetch(`${API_BASE}/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: form,
@@ -74,7 +84,7 @@ export const api = {
     const form = new URLSearchParams();
     form.append('username', matric);
     form.append('password', password);
-    return fetch(`${API_BASE}/token/student`, {
+    return apiFetch(`${API_BASE}/token/student`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: form,
@@ -100,7 +110,7 @@ export const api = {
   searchStudents: (q) => request(`/api/students/search?q=${encodeURIComponent(q)}`),
   getStudent: (id) => request(`/api/students/${id}`),
   createStudent: (data) => request('/api/students', { method: 'POST', body: JSON.stringify(data) }),
-  registerStudent: (data) => fetch(`${API_BASE}/api/students/register`, {
+  registerStudent: (data) => apiFetch(`${API_BASE}/api/students/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -115,7 +125,7 @@ export const api = {
 
   // Documents (staff)
   uploadDocument: (formData) => {
-    return fetch(`${API_BASE}/api/documents`, {
+    return apiFetch(`${API_BASE}/api/documents`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${getToken()}` },
       body: formData,
@@ -130,7 +140,7 @@ export const api = {
 
   // Documents (student self-service)
   uploadMyDocument: (formData) => {
-    return fetch(`${API_BASE}/api/me/documents`, {
+    return apiFetch(`${API_BASE}/api/me/documents`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${getToken()}` },
       body: formData,
