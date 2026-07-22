@@ -28,6 +28,22 @@ resource "render_web_service" "api" {
   region            = var.region
   health_check_path = "/health"
 
+  maintenance_mode = null
+
+  lifecycle {
+    ignore_changes = [
+      notification_override,
+      previews,
+      pull_request_previews_enabled,
+      log_stream_override,
+      max_shutdown_delay_seconds,
+      num_instances,
+      root_directory,
+      active_custom_domains,
+      env_vars["SECRET_KEY"].value,
+    ]
+  }
+
   runtime_source = {
     docker = {
       auto_deploy     = true
@@ -88,10 +104,10 @@ resource "render_web_service" "api" {
       value = var.dashscope_api_key
     }
     VISION_VERIFY_UPLOADS = {
-      value = var.vision_verify_uploads
+      value = "true"
     }
     VISION_REJECT_ON_FAILURE = {
-      value = "false"
+      value = "true"
     }
     VISION_MIN_CONFIDENCE = {
       value = "0.7"
