@@ -38,7 +38,7 @@ export default function Login() {
         setPasswordForm({ current_password: password, new_password: '', confirm_password: '' });
       } else {
         login(data.access_token, user, 'staff');
-        navigate('/staff');
+        navigate('/');
       }
     } catch (err) {
       setError(err.message || 'Invalid email or password');
@@ -69,7 +69,7 @@ export default function Login() {
       );
       const updatedUser = { ...loginData.user, force_password_change: false };
       login(loginData.token, updatedUser, 'staff');
-      navigate('/staff');
+      navigate('/');
     } catch (err) {
       setError(err.message || 'Failed to change password');
     } finally {

@@ -53,7 +53,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Login />} />
       <Route
-        path="/staff/*"
+        path="/*"
         element={
           <StaffRoute>
             <StaffDashboard />
@@ -68,7 +68,7 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter basename="/staff">
+      <BrowserRouter>
         <ErrorBoundary>
           <AppRoutes />
         </ErrorBoundary>

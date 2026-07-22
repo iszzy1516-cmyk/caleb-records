@@ -7,7 +7,7 @@ export default function Navbar() {
   return (
     <nav className="navbar">
       <div className="container navbar-inner">
-        <Link to="/staff" className="navbar-brand">
+        <Link to="/" className="navbar-brand">
           <img src={`${import.meta.env.BASE_URL}caleb-logo.jpg`} alt="CUL" />
           <span>CU-Records</span>
         </Link>

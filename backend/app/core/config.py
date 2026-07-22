@@ -43,6 +43,7 @@ class Settings(BaseSettings):
 
     # S3-compatible object storage for document uploads
     S3_UPLOAD_BUCKET: Optional[str] = None
+    S3_ENDPOINT_URL: Optional[str] = None
     AWS_REGION: str = "us-east-1"
     AWS_ACCESS_KEY_ID: Optional[str] = None
     AWS_SECRET_ACCESS_KEY: Optional[str] = None

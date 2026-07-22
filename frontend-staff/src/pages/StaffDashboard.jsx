@@ -13,19 +13,19 @@ function Sidebar() {
   const navigate = useNavigate();
 
   const items = [
-    { path: '/staff', label: 'Dashboard' },
-    { path: '/staff/search', label: 'Search Students' },
-    { path: '/staff/register', label: 'Register Student' },
-    { path: '/staff/upload', label: 'Upload Document' },
-    { path: '/staff/missing', label: 'Missing Documents' },
-    { path: '/staff/deadlines', label: 'Document Deadlines' },
+    { path: '/', label: 'Dashboard' },
+    { path: '/search', label: 'Search Students' },
+    { path: '/register', label: 'Register Student' },
+    { path: '/upload', label: 'Upload Document' },
+    { path: '/missing', label: 'Missing Documents' },
+    { path: '/deadlines', label: 'Document Deadlines' },
   ];
 
   if (isAdmin || isDean) {
-    items.push({ path: '/staff/users', label: 'User Management' });
+    items.push({ path: '/users', label: 'User Management' });
   }
   if (isAdmin) {
-    items.push({ path: '/staff/audit', label: 'Audit Logs' });
+    items.push({ path: '/audit', label: 'Audit Logs' });
   }
 
   return (
