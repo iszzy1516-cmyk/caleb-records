@@ -60,6 +60,8 @@ def get_stats(db: Session = Depends(get_db), user: User = Depends(get_current_st
                 missing.append(dt)
         if ("clearance_cert", s.current_level) not in doc_types:
             missing.append(f"clearance_cert_{s.current_level}L")
+        if ("course_form", s.current_level) not in doc_types:
+            missing.append(f"course_form_{s.current_level}L")
         if missing:
             total_missing += 1
 

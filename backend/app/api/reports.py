@@ -44,6 +44,8 @@ def missing_documents_report(
 
         if ("clearance_cert", student.current_level) not in doc_types:
             missing.append(f"clearance_cert_{student.current_level}L")
+        if ("course_form", student.current_level) not in doc_types:
+            missing.append(f"course_form_{student.current_level}L")
 
         if missing:
             report.append(

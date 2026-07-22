@@ -38,6 +38,7 @@ VISION_MIN_CONFIDENCE = float(os.environ.get("VISION_MIN_CONFIDENCE", "0.7"))
 # Document type display names used in prompts
 DOCUMENT_TYPE_LABELS = {
     "clearance_cert": "Clearance Certificate",
+    "course_form": "Course Form",
     "jamb_result": "JAMB Result",
     "waec_result": "WAEC/NECO Result",
     "jamb_admission_letter": "JAMB Admission Letter",
@@ -85,6 +86,12 @@ DOCUMENT_TYPE_DESCRIPTIONS = {
         "It should show a hospital, clinic, or doctor's letterhead, examination details, "
         "doctor's name/signature, and official stamp. "
         "Reject unrelated documents, drug receipts, or selfies."
+    ),
+    "course_form": (
+        "a university course form or course registration form. "
+        "It should show the university/department header, student name, matric number, "
+        "academic session, level, list of registered courses, and official stamp/signature. "
+        "Reject unrelated papers."
     ),
     "clearance_cert": (
         "a university clearance certificate. "

@@ -195,6 +195,36 @@ export default function StudentPortal() {
                   );
                 })}
               </div>
+
+              <h4 style={{ marginBottom: '0.75rem', marginTop: '1.5rem', fontSize: '0.9375rem', color: 'var(--cul-gray-700)' }}>Course Forms</h4>
+              <div className="doc-checklist">
+                {Array.from(
+                  { length: student.program?.duration_years || 4 },
+                  (_, i) => (i + 1) * 100
+                ).map((lvl) => {
+                  const doc = getDoc('course_form', lvl);
+                  return (
+                    <div key={lvl} className={`doc-checklist-item ${doc ? 'present' : 'missing'}`}>
+                      <div className="doc-icon">{doc ? '✓' : '✗'}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{lvl} Level Course Form</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--cul-gray-500)' }}>
+                          {doc ? `Uploaded ${new Date(doc.created_at).toLocaleDateString()}` : 'Not uploaded'}
+                        </div>
+                      </div>
+                      {doc && (
+                        <button
+                          onClick={() => api.downloadDocument(doc).catch((err) => alert(err.message))}
+                          className="btn btn-sm btn-outline"
+                          style={{ flexShrink: 0 }}
+                        >
+                          Download
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Academic Records */}

@@ -203,6 +203,20 @@ function SearchPage() {
                   </div>
                 </div>
               ))}
+              {Array.from(
+                { length: details.program?.duration_years || 4 },
+                (_, i) => (i + 1) * 100
+              ).map((lvl) => (
+                <div key={`cf-${lvl}`} className={`doc-checklist-item ${hasDoc('course_form', lvl) ? 'present' : 'missing'}`}>
+                  <div className="doc-icon">{hasDoc('course_form', lvl) ? 'Yes' : 'No'}</div>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{lvl}L Course Form</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--cul-gray-500)' }}>
+                      {hasDoc('course_form', lvl) ? 'Uploaded' : 'Missing'}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -613,6 +627,7 @@ function UploadPage() {
 
   const docTypes = [
     { value: 'clearance_cert', label: 'Clearance Certificate' },
+    { value: 'course_form', label: 'Course Form' },
     { value: 'jamb_result', label: 'JAMB Result' },
     { value: 'waec_result', label: 'WAEC/NECO Result' },
     { value: 'jamb_admission_letter', label: 'JAMB Admission Letter' },
@@ -623,7 +638,7 @@ function UploadPage() {
     { value: 'transcript', label: 'Transcript' },
   ];
 
-  const showLevel = docType === 'clearance_cert';
+  const showLevel = docType === 'clearance_cert' || docType === 'course_form';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -738,6 +753,7 @@ function DocumentDeadlinesPage() {
 
   const docTypes = [
     { value: 'clearance_cert', label: 'Clearance Certificate' },
+    { value: 'course_form', label: 'Course Form' },
     { value: 'jamb_result', label: 'JAMB Result' },
     { value: 'waec_result', label: 'WAEC/NECO Result' },
     { value: 'jamb_admission_letter', label: 'JAMB Admission Letter' },
@@ -807,7 +823,7 @@ function DocumentDeadlinesPage() {
           </select>
         </div>
 
-        {form.document_type === 'clearance_cert' && (
+        {(form.document_type === 'clearance_cert' || form.document_type === 'course_form') && (
           <div className="form-group">
             <label className="form-label">Level</label>
             <select className="form-select" value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })} required>

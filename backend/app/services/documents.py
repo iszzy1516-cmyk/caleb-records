@@ -39,10 +39,10 @@ def save_upload_file(
             status_code=400,
             detail=f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}",
         )
-    if document_type == "clearance_cert" and level not in (100, 200, 300, 400, 500):
-        raise HTTPException(status_code=400, detail="Level is required for clearance certificates")
-    if document_type == "clearance_cert" and not session:
-        raise HTTPException(status_code=400, detail="Academic session is required for clearance certificates")
+    if document_type in ("clearance_cert", "course_form") and level not in (100, 200, 300, 400, 500):
+        raise HTTPException(status_code=400, detail=f"Level is required for {document_type.replace('_', ' ')} documents")
+    if document_type in ("clearance_cert", "course_form") and not session:
+        raise HTTPException(status_code=400, detail=f"Academic session is required for {document_type.replace('_', ' ')} documents")
 
     contents = file.file.read()
     if len(contents) > settings.MAX_FILE_SIZE:

@@ -81,7 +81,7 @@ export default function StudentDashboard() {
     const formData = new FormData();
     formData.append('document_type', uploadForm.document_type);
     formData.append('file', uploadForm.file);
-    if (uploadForm.document_type === 'clearance_cert') {
+    if (uploadForm.document_type === 'clearance_cert' || uploadForm.document_type === 'course_form') {
       if (uploadForm.level) formData.append('level', uploadForm.level);
       if (uploadForm.session) formData.append('session', uploadForm.session);
     }
@@ -302,6 +302,49 @@ export default function StudentDashboard() {
                 })}
               </div>
             </div>
+
+            <div className="card" style={{ marginTop: '1.5rem' }}>
+              <div className="card-header">
+                <h3>Course Forms</h3>
+              </div>
+              <div className="doc-checklist">
+                {Array.from(
+                  { length: student.program?.duration_years || 4 },
+                  (_, i) => (i + 1) * 100
+                ).map((lvl) => {
+                  const doc = getDoc('course_form', lvl);
+                  return (
+                    <div key={lvl} className={`doc-checklist-item ${doc ? 'present' : 'missing'}`}>
+                      <div className="doc-icon">{doc ? '✓' : '✗'}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{lvl} Level Course Form</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--cul-gray-500)' }}>
+                          {doc ? `Uploaded ${new Date(doc.created_at).toLocaleDateString()}` : 'Not uploaded'}
+                        </div>
+                        {doc && (
+                          <div style={{ fontSize: '0.7rem', marginTop: '0.25rem' }}>
+                            {doc.verified ? (
+                              <span style={{ color: 'var(--cul-green)' }}>Verified</span>
+                            ) : (
+                              <span style={{ color: 'var(--cul-warning)' }}>Pending verification</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {doc && (
+                        <button
+                          onClick={() => api.downloadDocument(doc).catch((err) => alert(err.message))}
+                          className="btn btn-sm btn-outline"
+                          style={{ flexShrink: 0 }}
+                        >
+                          Download
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </>
         )}
 
@@ -372,12 +415,13 @@ export default function StudentDashboard() {
                     <option key={dt.key} value={dt.key}>{dt.label}</option>
                   ))}
                   <option value="clearance_cert">Clearance Certificate</option>
+                  <option value="course_form">Course Form</option>
                   <option value="fee_receipt">Fee Receipt</option>
                   <option value="transcript">Transcript</option>
                 </select>
               </div>
 
-              {uploadForm.document_type === 'clearance_cert' && (
+              {(uploadForm.document_type === 'clearance_cert' || uploadForm.document_type === 'course_form') && (
                 <>
                   <div className="form-group">
                     <label className="form-label">Level</label>

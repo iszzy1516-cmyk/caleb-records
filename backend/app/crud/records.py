@@ -171,6 +171,8 @@ def generate_missing_document_alerts(db: Session) -> int:
 
         if ("clearance_cert", student.current_level) not in doc_types:
             missing.append(f"{student.current_level}L Clearance Certificate")
+        if ("course_form", student.current_level) not in doc_types:
+            missing.append(f"{student.current_level}L Course Form")
 
         if missing:
             existing = db.query(Alert).filter(
