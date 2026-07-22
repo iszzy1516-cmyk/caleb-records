@@ -4,6 +4,11 @@ variable "render_api_key" {
   sensitive   = true
 }
 
+variable "render_owner_id" {
+  description = "Render owner ID (team or user ID)"
+  type        = string
+}
+
 variable "region" {
   description = "Render region"
   type        = string
