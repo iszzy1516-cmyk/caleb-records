@@ -30,7 +30,8 @@ class Settings(BaseSettings):
         "http://localhost,https://localhost,http://localhost:5173,"
         "http://localhost:5174,http://localhost:8000,https://tauri.localhost,"
         "tauri://localhost,https://culrecords.duckdns.org,"
-        "http://141.147.48.186,https://141.147.48.186"
+        "https://culrecords-student.pages.dev,"
+        "https://culrecords-staff.pages.dev"
     )
 
     # SMTP
