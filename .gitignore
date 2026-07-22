@@ -63,3 +63,9 @@ infrastructure/terraform/render/*.tfstate
 infrastructure/terraform/render/*.tfstate.*
 infrastructure/terraform/render/terraform.tfvars
 infrastructure/terraform/render/render-secrets.env
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
