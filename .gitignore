@@ -58,3 +58,8 @@ infrastructure/terraform/cloudflare/.terraform/
 infrastructure/terraform/cloudflare/*.tfstate
 infrastructure/terraform/cloudflare/*.tfstate.*
 infrastructure/terraform/cloudflare/render-secrets.env
+infrastructure/terraform/render/.terraform/
+infrastructure/terraform/render/*.tfstate
+infrastructure/terraform/render/*.tfstate.*
+infrastructure/terraform/render/terraform.tfvars
+infrastructure/terraform/render/render-secrets.env
