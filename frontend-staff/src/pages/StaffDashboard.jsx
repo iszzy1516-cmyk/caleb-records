@@ -142,7 +142,6 @@ function SearchPage() {
     { key: 'jamb_admission_letter', label: 'JAMB Admission Letter' },
     { key: 'birth_certificate', label: 'Birth Certificate' },
     { key: 'passport_photo', label: 'Passport Photo' },
-    { key: 'medical', label: 'Medical Report' },
   ];
 
   const hasDoc = (type, level = null) => {

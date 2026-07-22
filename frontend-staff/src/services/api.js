@@ -152,7 +152,6 @@ export const api = {
     const url = `${API_BASE}/api/documents/${doc?.id}/download`;
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${getToken()}` },
-      credentials: 'include',
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Download failed' }));

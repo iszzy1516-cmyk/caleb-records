@@ -19,7 +19,6 @@ REQUIRED_ONE_TIME_DOCUMENTS = [
     "jamb_admission_letter",
     "birth_certificate",
     "passport_photo",
-    "medical",
 ]
 
 
