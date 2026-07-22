@@ -9,6 +9,11 @@ function StaffRoute({ children }) {
   return isAuthenticated && isStaff ? children : <Navigate to="/" replace />;
 }
 
+function RootRoute() {
+  const { isAuthenticated, isStaff } = useAuth();
+  return isAuthenticated && isStaff ? <StaffDashboard /> : <Login />;
+}
+
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -51,7 +56,7 @@ class ErrorBoundary extends Component {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Login />} />
+      <Route path="/" element={<RootRoute />} />
       <Route
         path="/*"
         element={
