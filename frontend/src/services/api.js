@@ -8,7 +8,7 @@ function getApiBase() {
   }
   // Tauri mobile/desktop app connects to live server
   if (typeof window !== 'undefined' && window.__TAURI__) {
-    return 'https://culrecords.duckdns.org';
+    return 'https://culrecords-api.onrender.com';
   }
   // Web frontend uses same-domain relative path
   return '';

@@ -10,17 +10,27 @@
     {
       "identifier": "http:default",
       "allow": [
+        { "url": "https://culrecords-api.onrender.com" },
+        { "url": "https://*.onrender.com" },
+        { "url": "https://culrecords-student.pages.dev" },
+        { "url": "https://culrecords-staff.pages.dev" },
+        { "url": "https://*.pages.dev" },
         { "url": "https://culrecords.duckdns.org" },
         { "url": "https://*.duckdns.org" },
         { "url": "http://98.85.146.214" },
         { "url": "https://98.85.146.214" },
         { "url": "https://*.s3.amazonaws.com" },
-        { "url": "https://*.s3.*.amazonaws.com" }
+        { "url": "https://*.s3.*.amazonaws.com" },
+        { "url": "https://pub-*.r2.dev" }
       ]
     },
     {
       "identifier": "shell:allow-open",
-      "allow": [{ "url": "https://*.s3.amazonaws.com" }, { "url": "https://*.s3.*.amazonaws.com" }]
+      "allow": [
+        { "url": "https://*.s3.amazonaws.com" },
+        { "url": "https://*.s3.*.amazonaws.com" },
+        { "url": "https://pub-*.r2.dev" }
+      ]
     }
   ]
 }
